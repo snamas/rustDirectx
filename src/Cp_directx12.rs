@@ -26,7 +26,7 @@ use crate::Id3d12commandQueue;
 pub struct CpID3D12Device<'a>(pub &'a ID3D12Device);
 
 pub struct CpID3D12CommandQueue<'a> {
-    value: &'a mut ID3D12CommandQueue,
+    pub(crate) value: &'a mut ID3D12CommandQueue,
     type_: D3D12_COMMAND_LIST_TYPE,
 }
 

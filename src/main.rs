@@ -108,7 +108,7 @@ fn main() {
         _id3d12device.cp_create_render_target_view(&mut _swap_res, None, handle.cp_descriptor_handle_increment_ptr(&_id3d12device, index));
     }
     let mut _id3d12command_allocator = _id3d12device.cp_create_command_allocator(D3D12_COMMAND_LIST_TYPE_DIRECT).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
-    let mut _id3d12graphics_command_list = _id3d12device.cp_create_command_list(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &mut _id3d12command_allocator, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
+    let mut _id3d12graphics_command_list = _id3d12device.cp_create_command_list(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &mut _id3d12command_allocator, &mut None).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
 
     let lists = [_id3d12graphics_command_list.0];
     let _dev = &_id3d12device.0;
@@ -138,7 +138,7 @@ fn main() {
         unsafe { lists[0].OMSetRenderTargets(1, &current_sw_heaps.value, i32::from(true), null_mut()) };
         unsafe { lists[0].ClearRenderTargetView(current_sw_heaps.value, &clearcolor, 0, null_mut()) }
         unsafe { lists[0].Close() };
-        unsafe { _id3d12_command_queue.0.ExecuteCommandLists(1, lists.as_ptr() as *const *mut ID3D12CommandList) }
+        unsafe { _id3d12_command_queue.value.ExecuteCommandLists(1, lists.as_ptr() as *const *mut ID3D12CommandList) }
 
         unsafe { _dxgi_swap_chain4.0.Present(1, 0) };
     }
