@@ -32,7 +32,10 @@ pub struct CpID3D12CommandQueue<'a> {
 
 pub struct CpIDXGIFactory6<'a>(pub &'a IDXGIFactory6);
 
-pub struct CpIDXGISwapChain4<'a>(pub &'a IDXGISwapChain4);
+pub struct CpIDXGISwapChain4<'a>{
+    pub value:&'a IDXGISwapChain4,
+    pub desc: DXGI_SWAP_CHAIN_DESC1
+}
 
 pub struct CpID3D12DescriptorHeap<'a> {
     value: &'a ID3D12DescriptorHeap,
@@ -54,8 +57,8 @@ pub struct CpD3D12_CPU_DESCRIPTOR_HANDLE {
 
 pub struct CpID3D12CommandDispacher<'a> {
     command_queue:&'a CpID3D12CommandQueue<'a>,
-    command_allocator: CpID3D12CommandAllocator<'a>,
-    command_lists: Vec<CpID3D12GraphicsCommandList<'a>>,
+    pub command_allocator: CpID3D12CommandAllocator<'a>,
+    pub command_lists: Vec<CpID3D12GraphicsCommandList<'a>>,
 }
 
 impl CpD3D12_CPU_DESCRIPTOR_HANDLE {
@@ -268,7 +271,7 @@ impl<'a> CpIDXGIFactory6<'a> {
             match self.0.CreateSwapChainForHwnd(_que.value as *mut ID3D12CommandQueue as *mut IUnknown, hwnd.0, &dxgi_swap_chain_desc1, null_mut(), null_mut(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut IDXGISwapChain4).as_ref() {
-                        Some(_dxgi_swap_chain4) => { return Ok(CpIDXGISwapChain4(_dxgi_swap_chain4)); }
+                        Some(_dxgi_swap_chain4) => { return Ok(CpIDXGISwapChain4{value:_dxgi_swap_chain4,desc:dxgi_swap_chain_desc1}); }
                         None => { return Err(v); }
                     };
                 }
@@ -365,7 +368,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
                 AlphaMode: 0,
                 Flags: 0,
             };
-            match self.0.GetDesc1(&mut dxgi_swap_chain_desc1).hresult_to_result() {
+            match self.value.GetDesc1(&mut dxgi_swap_chain_desc1).hresult_to_result() {
                 Ok(_) => return Ok(dxgi_swap_chain_desc1),
                 Err(v) => Err(v)
             }
@@ -374,7 +377,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
     pub fn cp_get_buffer(&self, buffer: UINT) -> Result<CpID3D12Resource, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
-            match self.0.GetBuffer(buffer, &ID3D12Resource::uuidof(), &mut _unknownobj).hresult_to_result() {
+            match self.value.GetBuffer(buffer, &ID3D12Resource::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12Resource).as_mut() {
                         Some(id3d12resource) => { return Ok(CpID3D12Resource(id3d12resource)); }
@@ -385,8 +388,56 @@ impl<'a> CpIDXGISwapChain4<'a> {
             }
         }
     }
+    pub fn cp_get_current_back_buffer_index(&self)-> UINT{
+        unsafe{
+            return self.value.GetCurrentBackBufferIndex();
+        }
+    }
 }
-
+impl<'a> CpID3D12CommandAllocator<'a> {
+    pub fn cp_reset(&self)->Result<HRESULT,HRESULT>{
+        unsafe {
+            return self.0.Reset().hresult_to_result();
+        }
+    }
+}
+impl<'a>  CpID3D12GraphicsCommandList<'a> {
+    pub fn cp_reset(&self, cp_id3d12command_allocator:&mut CpID3D12CommandAllocator,p_initial_state_opt:&mut  Option<ID3D12PipelineState>)->Result<HRESULT,HRESULT>{
+        let p_initial_state: *mut ID3D12PipelineState = match p_initial_state_opt {
+            Some(v) => { v }
+            None => { null_mut() }
+        };
+        unsafe{
+            return self.0.Reset(cp_id3d12command_allocator.0,p_initial_state).hresult_to_result();
+        }
+    }
+}
+impl <'a> CpID3D12CommandDispacher<'a> {
+    pub fn cp_list_reset(&mut self, index:usize, p_initial_state_opt: &mut Option<ID3D12PipelineState>) ->Result<HRESULT,HRESULT>{
+        self.command_lists[index].cp_reset(&mut self.command_allocator, p_initial_state_opt)
+    }
+    pub fn cp_list_allreset(&mut self, p_initial_state_opt:&mut  Option<ID3D12PipelineState>){
+        for command_list in &self.command_lists {
+            command_list.cp_reset(&mut self.command_allocator, p_initial_state_opt);
+        }
+    }
+    pub fn cp_reset(&mut self, p_initial_state_opt:&mut  Option<ID3D12PipelineState>){
+        self.command_allocator.cp_reset();
+        self.cp_list_allreset( p_initial_state_opt);
+    }
+    pub fn cp_execute_command_lists(&mut self){
+        self.command_queue.cp_execute_command_lists(&mut self.command_lists)
+    }
+}
+impl <'a> CpID3D12CommandQueue<'a> {
+    pub fn cp_execute_command_lists(&self,cp_ID3D12CommandLists:&mut Vec<CpID3D12GraphicsCommandList>){
+        let NumCommandLists:u32 = cp_ID3D12CommandLists.len() as u32;
+        let ppCommandLists = cp_ID3D12CommandLists.as_ptr() as *const *mut ID3D12CommandList;
+        unsafe{
+            self.value.ExecuteCommandLists(NumCommandLists,ppCommandLists);
+        }
+    }
+}
 impl<'a> CpID3D12Resource<'a> {}
 
 impl<'a> CpID3D12DescriptorHeap<'a> {
