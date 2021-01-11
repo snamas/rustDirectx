@@ -1,7 +1,7 @@
 extern crate winapi;
 
 use winapi::um::winnt::{HRESULT, LPCWSTR};
-use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE};
+use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE, TRUE, BOOL};
 use winapi::shared::windef::{HICON, HWND, RECT, HWND__, POINT};
 use winapi::um::winuser::{MB_OK, MessageBoxW, WM_DESTROY, PostQuitMessage, WNDCLASSEXW, AdjustWindowRect, WS_OVERLAPPEDWINDOW, RegisterClassExW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, WS_VISIBLE, UnregisterClassW, LoadCursorW, IDC_ARROW, CS_OWNDC, AdjustWindowRectEx, ShowWindow, SW_SHOW, PeekMessageW, MSG, TranslateMessage, DispatchMessageW, WM_QUIT, PM_REMOVE, WS_OVERLAPPED};
 use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, ID3D12Pageable, ID3D12DeviceChild, ID3D12Object, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_DESCRIPTOR_HEAP_TYPE, D3D12_RENDER_TARGET_VIEW_DESC, D3D12_COMMAND_LIST_TYPE, ID3D12PipelineState};
@@ -32,9 +32,9 @@ pub struct CpID3D12CommandQueue<'a> {
 
 pub struct CpIDXGIFactory6<'a>(pub &'a IDXGIFactory6);
 
-pub struct CpIDXGISwapChain4<'a>{
-    pub value:&'a IDXGISwapChain4,
-    pub desc: DXGI_SWAP_CHAIN_DESC1
+pub struct CpIDXGISwapChain4<'a> {
+    pub value: &'a IDXGISwapChain4,
+    pub desc: DXGI_SWAP_CHAIN_DESC1,
 }
 
 pub struct CpID3D12DescriptorHeap<'a> {
@@ -43,6 +43,11 @@ pub struct CpID3D12DescriptorHeap<'a> {
 }
 
 pub struct CpHWND<'a>(pub &'a mut HWND__, WNDCLASSEXW);
+
+pub struct CpMSG {
+    value: MSG,
+    pub hasMessage: bool
+}
 
 pub struct CpID3D12Resource<'a>(pub &'a mut ID3D12Resource);
 
@@ -56,7 +61,7 @@ pub struct CpD3D12_CPU_DESCRIPTOR_HANDLE {
 }
 
 pub struct CpID3D12CommandDispacher<'a> {
-    command_queue:&'a CpID3D12CommandQueue<'a>,
+    command_queue: &'a CpID3D12CommandQueue<'a>,
     pub command_allocator: CpID3D12CommandAllocator<'a>,
     pub command_lists: Vec<CpID3D12GraphicsCommandList<'a>>,
 }
@@ -94,6 +99,19 @@ impl HRESULTChecker for HRESULT {
     }
 }
 
+trait BOOLTranslater {
+    fn BOOLtobool(&self) -> bool;
+}
+
+impl BOOLTranslater for BOOL {
+    fn BOOLtobool(&self) -> bool {
+        match *self {
+            TRUE => true,
+            FALSE => false,
+            _ => false
+        }
+    }
+}
 
 impl<'a> CpID3D12Device<'a> {
     pub fn new() -> CpID3D12Device<'a> {
@@ -185,7 +203,7 @@ impl<'a> CpID3D12Device<'a> {
             };
         }
     }
-    pub fn cp_create_command_list(&self, node_mask: UINT, type_: D3D12_COMMAND_LIST_TYPE, p_command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option< ID3D12PipelineState>) -> Result<CpID3D12GraphicsCommandList<'a>, HRESULT> {
+    pub fn cp_create_command_list(&self, node_mask: UINT, type_: D3D12_COMMAND_LIST_TYPE, p_command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<CpID3D12GraphicsCommandList<'a>, HRESULT> {
         let p_initial_state: *mut ID3D12PipelineState = match p_initial_state_opt {
             Some(v) => { v }
             None => { null_mut() }
@@ -205,11 +223,11 @@ impl<'a> CpID3D12Device<'a> {
     }
     pub fn cp_create_command_dispacher(&self, node_mask: UINT, cp_id3d12command_queue: &'a CpID3D12CommandQueue<'a>, listnum: u32, mut p_initial_state_opt: Option<ID3D12PipelineState>) -> Result<CpID3D12CommandDispacher<'a>, HRESULT> {
         let mut _id3d12command_allocator = self.cp_create_command_allocator(cp_id3d12command_queue.type_).unwrap_or_else(|v| { panic!("{}", v) });
-        let mut command_lists = (0..listnum).map(|index|->CpID3D12GraphicsCommandList {
+        let mut command_lists = (0..listnum).map(|index| -> CpID3D12GraphicsCommandList {
             self.cp_create_command_list(node_mask, cp_id3d12command_queue.type_, &mut _id3d12command_allocator, &mut p_initial_state_opt).unwrap_or_else(|v| { panic!("{}", v) })
         }).collect();
         return Ok(CpID3D12CommandDispacher {
-            command_queue:&cp_id3d12command_queue,
+            command_queue: &cp_id3d12command_queue,
             command_allocator: _id3d12command_allocator,
             command_lists: command_lists,
         });
@@ -271,7 +289,7 @@ impl<'a> CpIDXGIFactory6<'a> {
             match self.0.CreateSwapChainForHwnd(_que.value as *mut ID3D12CommandQueue as *mut IUnknown, hwnd.0, &dxgi_swap_chain_desc1, null_mut(), null_mut(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut IDXGISwapChain4).as_ref() {
-                        Some(_dxgi_swap_chain4) => { return Ok(CpIDXGISwapChain4{value:_dxgi_swap_chain4,desc:dxgi_swap_chain_desc1}); }
+                        Some(_dxgi_swap_chain4) => { return Ok(CpIDXGISwapChain4 { value: _dxgi_swap_chain4, desc: dxgi_swap_chain_desc1 }); }
                         None => { return Err(v); }
                     };
                 }
@@ -281,6 +299,31 @@ impl<'a> CpIDXGIFactory6<'a> {
     }
 }
 
+impl CpMSG {
+    pub fn cp_peek_message_w(hWnd: HWND, wMsgFilterMin: UINT, wMsgFilterMax: UINT, wRemoveMsg: UINT) -> CpMSG {
+        let mut msg = MSG {
+            hwnd: null_mut(),
+            message: 0,
+            wParam: 0,
+            lParam: 0,
+            time: 0,
+            pt: POINT { x: 0, y: 0 },
+        };
+        match unsafe { PeekMessageW(&mut msg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg).BOOLtobool() } {
+            true => return CpMSG { value: msg, hasMessage: true },
+            false => return CpMSG { value: msg, hasMessage: false }
+        }
+    }
+    pub fn cp_translate_message(&self) -> bool {
+        unsafe { return TranslateMessage(&self.value).BOOLtobool(); };
+    }
+    pub fn cp_dispatch_message_w(&self) {
+        unsafe { DispatchMessageW(&self.value) };
+    }
+    pub fn cp_has_wm_quit_message(&self) -> bool {
+        self.value.message == WM_QUIT
+    }
+}
 
 impl<'a> CpHWND<'a> {
     pub fn new(mut _wndclassexw_opt: Option<WNDCLASSEXW>, mut window_rc_opt: Option<RECT>) -> CpHWND<'a> {
@@ -388,56 +431,61 @@ impl<'a> CpIDXGISwapChain4<'a> {
             }
         }
     }
-    pub fn cp_get_current_back_buffer_index(&self)-> UINT{
-        unsafe{
+    pub fn cp_get_current_back_buffer_index(&self) -> UINT {
+        unsafe {
             return self.value.GetCurrentBackBufferIndex();
         }
     }
 }
+
 impl<'a> CpID3D12CommandAllocator<'a> {
-    pub fn cp_reset(&self)->Result<HRESULT,HRESULT>{
+    pub fn cp_reset(&self) -> Result<HRESULT, HRESULT> {
         unsafe {
             return self.0.Reset().hresult_to_result();
         }
     }
 }
-impl<'a>  CpID3D12GraphicsCommandList<'a> {
-    pub fn cp_reset(&self, cp_id3d12command_allocator:&mut CpID3D12CommandAllocator,p_initial_state_opt:&mut  Option<ID3D12PipelineState>)->Result<HRESULT,HRESULT>{
+
+impl<'a> CpID3D12GraphicsCommandList<'a> {
+    pub fn cp_reset(&self, cp_id3d12command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<HRESULT, HRESULT> {
         let p_initial_state: *mut ID3D12PipelineState = match p_initial_state_opt {
             Some(v) => { v }
             None => { null_mut() }
         };
-        unsafe{
-            return self.0.Reset(cp_id3d12command_allocator.0,p_initial_state).hresult_to_result();
+        unsafe {
+            return self.0.Reset(cp_id3d12command_allocator.0, p_initial_state).hresult_to_result();
         }
     }
 }
-impl <'a> CpID3D12CommandDispacher<'a> {
-    pub fn cp_list_reset(&mut self, index:usize, p_initial_state_opt: &mut Option<ID3D12PipelineState>) ->Result<HRESULT,HRESULT>{
+
+impl<'a> CpID3D12CommandDispacher<'a> {
+    pub fn cp_list_reset(&mut self, index: usize, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<HRESULT, HRESULT> {
         self.command_lists[index].cp_reset(&mut self.command_allocator, p_initial_state_opt)
     }
-    pub fn cp_list_allreset(&mut self, p_initial_state_opt:&mut  Option<ID3D12PipelineState>){
+    pub fn cp_list_allreset(&mut self, p_initial_state_opt: &mut Option<ID3D12PipelineState>) {
         for command_list in &self.command_lists {
             command_list.cp_reset(&mut self.command_allocator, p_initial_state_opt);
         }
     }
-    pub fn cp_reset(&mut self, p_initial_state_opt:&mut  Option<ID3D12PipelineState>){
+    pub fn cp_reset(&mut self, p_initial_state_opt: &mut Option<ID3D12PipelineState>) {
         self.command_allocator.cp_reset();
-        self.cp_list_allreset( p_initial_state_opt);
+        self.cp_list_allreset(p_initial_state_opt);
     }
-    pub fn cp_execute_command_lists(&mut self){
+    pub fn cp_execute_command_lists(&mut self) {
         self.command_queue.cp_execute_command_lists(&mut self.command_lists)
     }
 }
-impl <'a> CpID3D12CommandQueue<'a> {
-    pub fn cp_execute_command_lists(&self,cp_ID3D12CommandLists:&mut Vec<CpID3D12GraphicsCommandList>){
-        let NumCommandLists:u32 = cp_ID3D12CommandLists.len() as u32;
+
+impl<'a> CpID3D12CommandQueue<'a> {
+    pub fn cp_execute_command_lists(&self, cp_ID3D12CommandLists: &mut Vec<CpID3D12GraphicsCommandList>) {
+        let NumCommandLists: u32 = cp_ID3D12CommandLists.len() as u32;
         let ppCommandLists = cp_ID3D12CommandLists.as_ptr() as *const *mut ID3D12CommandList;
-        unsafe{
-            self.value.ExecuteCommandLists(NumCommandLists,ppCommandLists);
+        unsafe {
+            self.value.ExecuteCommandLists(NumCommandLists, ppCommandLists);
         }
     }
 }
+
 impl<'a> CpID3D12Resource<'a> {}
 
 impl<'a> CpID3D12DescriptorHeap<'a> {
