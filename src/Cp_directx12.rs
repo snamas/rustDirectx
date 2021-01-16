@@ -1,27 +1,31 @@
-use winapi::um::winnt::{HRESULT, LPCWSTR, HANDLE};
+use winapi::um::winnt::{HRESULT, LPCWSTR, HANDLE, LPCSTR};
 use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE, TRUE, BOOL};
 use winapi::shared::windef::{HICON, HWND, RECT, HWND__, POINT};
 use winapi::um::winuser::{MB_OK, MessageBoxW, WM_DESTROY, PostQuitMessage, WNDCLASSEXW, AdjustWindowRect, WS_OVERLAPPEDWINDOW, RegisterClassExW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, WS_VISIBLE, UnregisterClassW, LoadCursorW, IDC_ARROW, CS_OWNDC, AdjustWindowRectEx, ShowWindow, SW_SHOW, PeekMessageW, MSG, TranslateMessage, DispatchMessageW, WM_QUIT, PM_REMOVE, WS_OVERLAPPED};
-use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, ID3D12Pageable, ID3D12DeviceChild, ID3D12Object, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_DESCRIPTOR_HEAP_TYPE, D3D12_RENDER_TARGET_VIEW_DESC, D3D12_COMMAND_LIST_TYPE, ID3D12PipelineState, D3D12_RESOURCE_BARRIER, ID3D12Fence, D3D12_FENCE_FLAGS, D3D12_RESOURCE_BARRIER_TYPE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_RESOURCE_UAV_BARRIER, D3D12_RESOURCE_STATES, D3D12_RESOURCE_BARRIER_FLAGS, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_u, D3D12_RESOURCE_BARRIER_TYPE_ALIASING, D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_HEAP_PROPERTIES, D3D12_HEAP_FLAGS, D3D12_RESOURCE_DESC, D3D12_CLEAR_VALUE, D3D12_MEMORY_POOL_UNKNOWN, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_HEAP_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RANGE};
+use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, ID3D12Pageable, ID3D12DeviceChild, ID3D12Object, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_DESCRIPTOR_HEAP_TYPE, D3D12_RENDER_TARGET_VIEW_DESC, D3D12_COMMAND_LIST_TYPE, ID3D12PipelineState, D3D12_RESOURCE_BARRIER, ID3D12Fence, D3D12_FENCE_FLAGS, D3D12_RESOURCE_BARRIER_TYPE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_RESOURCE_UAV_BARRIER, D3D12_RESOURCE_STATES, D3D12_RESOURCE_BARRIER_FLAGS, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_u, D3D12_RESOURCE_BARRIER_TYPE_ALIASING, D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_HEAP_PROPERTIES, D3D12_HEAP_FLAGS, D3D12_RESOURCE_DESC, D3D12_CLEAR_VALUE, D3D12_MEMORY_POOL_UNKNOWN, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_HEAP_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RANGE, D3D12_VERTEX_BUFFER_VIEW, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_INDEX_BUFFER_VIEW, D3D12_GRAPHICS_PIPELINE_STATE_DESC};
 use winapi::um::d3d12sdklayers::{ID3D12Debug};
 use winapi::shared::dxgi1_6::{IDXGIFactory6};
 use winapi::shared::dxgi1_3::{CreateDXGIFactory2, DXGI_CREATE_FACTORY_DEBUG};
 use winapi::shared::dxgi1_2::{DXGI_SWAP_CHAIN_DESC1, DXGI_SCALING_STRETCH, DXGI_ALPHA_MODE_UNSPECIFIED};
 use winapi::shared::winerror::{S_OK};
-use winapi::um::d3dcommon::{D3D_FEATURE_LEVEL_12_1};
+use winapi::um::d3dcommon::{D3D_FEATURE_LEVEL_12_1, ID3DBlob, D3D_SHADER_MACRO, ID3DInclude, ID3D10Blob};
 use winapi::um::libloaderapi::{GetModuleHandleW};
 use winapi::um::unknwnbase::{IUnknown};
 use winapi::Interface;
 use std::ptr::null_mut;
 use winapi::shared::dxgi1_5::IDXGISwapChain4;
-use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN};
+use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_R16_UINT};
 use winapi::shared::dxgi::{DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, DXGI_SWAP_CHAIN_DESC};
 use winapi::shared::dxgitype::{DXGI_USAGE_BACK_BUFFER, DXGI_SAMPLE_DESC};
 use winapi::ctypes::c_void;
 use std::io::Error;
 use crate::Id3d12commandQueue;
+use winapi::um::d3dcompiler::D3DCompileFromFile;
+use std::ffi::CString;
 
 pub struct CpID3D12Device<'a>(pub &'a ID3D12Device);
+
+pub struct CpID3DBlob<'a>(pub &'a ID3DBlob);
 
 pub struct CpID3D12CommandQueue<'a> {
     pub(crate) value: &'a mut ID3D12CommandQueue,
@@ -49,7 +53,8 @@ pub struct CpMSG {
 
 pub struct CpID3D12Resource<'a, T> {
     pub(crate) value: &'a mut ID3D12Resource,
-    data : T
+    data : T,
+    destdata:Option<&'a mut T>
 }
 
 pub struct CpID3D12CommandAllocator<'a>(pub(crate) &'a mut ID3D12CommandAllocator);
@@ -83,7 +88,6 @@ impl CpD3D12_CPU_DESCRIPTOR_HANDLE {
         return newHandle;
     }
 }
-
 // pub fn cp_descriptor_handle_increment_ptr (&self, handle:&mut D3D12_CPU_DESCRIPTOR_HANDLE, index:u32, DescriptorHeapType: D3D12_DESCRIPTOR_HEAP_TYPE) -> &mut D3D12_CPU_DESCRIPTOR_HANDLE {
 //     handle.ptr += (index * self.cp_get_descriptor_handle_increment_size(DescriptorHeapType)) as usize;
 //     return handle;
@@ -264,7 +268,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_committed_resource<T>(&self,pHeapProperties: &D3D12_HEAP_PROPERTIES,HeapFlags: D3D12_HEAP_FLAGS,pResourceDesc: &D3D12_RESOURCE_DESC,InitialResourceState: D3D12_RESOURCE_STATES,pOptimizedClearValueOpt: &Option<D3D12_CLEAR_VALUE>,data:T) -> Result<CpID3D12Resource<T>, HRESULT> {
+    pub fn cp_create_committed_resource<T>(&self,pHeapProperties: &D3D12_HEAP_PROPERTIES,HeapFlags: D3D12_HEAP_FLAGS,pResourceDesc: &D3D12_RESOURCE_DESC,InitialResourceState: D3D12_RESOURCE_STATES,pOptimizedClearValueOpt: &Option<D3D12_CLEAR_VALUE>,data:T) -> Result<CpID3D12Resource< T>, HRESULT> {
         let pOptimizedClearValue: *const D3D12_CLEAR_VALUE = match pOptimizedClearValueOpt {
             Some(v) => { v }
             None => { null_mut() }
@@ -274,7 +278,9 @@ impl<'a> CpID3D12Device<'a> {
             match self.0.CreateCommittedResource(pHeapProperties, HeapFlags, pResourceDesc, InitialResourceState, pOptimizedClearValue, &ID3D12Resource::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12Resource).as_mut() {
-                        Some(_id3d12_resorce) => { return Ok(CpID3D12Resource{value:_id3d12_resorce,data}); }
+                        Some(_id3d12_resorce) => {
+                            return Ok(CpID3D12Resource{value:_id3d12_resorce,data, destdata: None }) }
+
                         None => { return Err(v); }
                     }
                 }
@@ -282,8 +288,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_buffer_resource(&self,nodemask:u32,vertices:Vec<[f32;3]>){
-        let boxVert = vertices.into_boxed_slice();
+    pub fn cp_create_buffer_resource<T>(&self,nodemask:u32,vertices:Box<[T]>) -> Result<(CpID3D12Resource<Box<[T]>>,D3D12_VERTEX_BUFFER_VIEW), HRESULT>{
         let heapProperties= D3D12_HEAP_PROPERTIES {
             Type: D3D12_HEAP_TYPE_UPLOAD,
             CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -293,7 +298,7 @@ impl<'a> CpID3D12Device<'a> {
          let resourceDesc = D3D12_RESOURCE_DESC{
              Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
              Alignment: 0,
-             Width: std::mem::size_of_val(boxVert.as_ref()) as u64,
+             Width: std::mem::size_of_val(vertices.as_ref()) as u64,
              Height: 0,
              DepthOrArraySize: 1,
              MipLevels: 0,
@@ -302,12 +307,52 @@ impl<'a> CpID3D12Device<'a> {
              Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
              Flags: D3D12_RESOURCE_FLAG_NONE
          };
-        self.cp_create_committed_resource(
+        let vertexRes = self.cp_create_committed_resource(
             &heapProperties,
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST,
-            &None,boxVert);
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            &None,vertices)?;
+
+        let  vbView = D3D12_VERTEX_BUFFER_VIEW{
+            BufferLocation: unsafe{vertexRes.value.GetGPUVirtualAddress()},
+            SizeInBytes: std::mem::size_of_val(vertexRes.data.as_ref()) as u32,
+            StrideInBytes: std::mem::size_of_val(vertexRes.data.first().ok_or(S_OK)?) as u32
+        };
+        Ok((vertexRes,vbView))
+    }
+    pub fn cp_create_index_resource(&self,nodemask:u32,indices:Box<[u16]>) -> Result<(CpID3D12Resource<Box<[u16]>>,D3D12_INDEX_BUFFER_VIEW), HRESULT>{
+        let heapProperties= D3D12_HEAP_PROPERTIES {
+            Type: D3D12_HEAP_TYPE_UPLOAD,
+            CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+            MemoryPoolPreference: D3D12_MEMORY_POOL_UNKNOWN,
+            CreationNodeMask: nodemask,
+            VisibleNodeMask: nodemask };
+        let resourceDesc = D3D12_RESOURCE_DESC{
+            Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
+            Alignment: 0,
+            Width: std::mem::size_of_val(indices.as_ref()) as u64,
+            Height: 0,
+            DepthOrArraySize: 1,
+            MipLevels: 0,
+            Format:DXGI_FORMAT_UNKNOWN,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+            Flags: D3D12_RESOURCE_FLAG_NONE
+        };
+        let indexRes = self.cp_create_committed_resource(
+            &heapProperties,
+            D3D12_HEAP_FLAG_NONE,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            &None,indices)?;
+
+        let  idView = D3D12_INDEX_BUFFER_VIEW{
+            BufferLocation: unsafe{indexRes.value.GetGPUVirtualAddress()},
+            SizeInBytes: std::mem::size_of_val(indexRes.data.as_ref()) as u32,
+            Format : DXGI_FORMAT_R16_UINT
+        };
+        Ok((indexRes,idView))
     }
 }
 
@@ -513,20 +558,50 @@ impl<'a> CpHWND<'a> {
         unsafe { UnregisterClassW(self.1.lpszClassName, self.1.hInstance); }
     }
 }
-impl<'a,T> CpID3D12Resource<'a, T> {
-    pub fn cp_map(&self, ubresource: UINT,data:T, pReadRangeOpt: &Option<D3D12_RANGE>) -> Result<&mut T, HRESULT>{
+impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
+    pub fn cp_map(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<&'a mut T, HRESULT> {
+        let pReadRange:  *const D3D12_RANGE = match pReadRangeOpt {
+            Some(v) => { &v }
+            None => { null_mut() }
+        };
+        unsafe{
+            let mut _unknownobj = null_mut();
+            match self.value.Map(subresource, pReadRange, &mut _unknownobj).hresult_to_result() {
+                Ok(v) => match (_unknownobj as *mut T).as_mut(){
+                    None => {Err(v)}
+                    Some( _obj) => {Ok(_obj)}
+                }
+                Err(v) => Err(v)
+            }
+        }
+    }
+    pub fn cp_copy(&mut self,copydataOpt:&'a Option<T>,subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT>{
+        let copydata = match copydataOpt {
+            Some(v) => {v}
+            None => {&self.data}
+        };
+        match &mut self.destdata{
+            Some(v) => {
+                (**v).clone_from(copydata);
+            }
+            None => {
+                let mut dest = self.cp_map(subresource, pReadRangeOpt)?;
+                dest.clone_from(copydata);
+                self.destdata = Some(dest);
+            }
+        };
+        Ok(S_OK)
+    }
+    pub fn cp_unmap(&self, subresource: UINT, pReadRangeOpt: &Option<D3D12_RANGE>){
         let pReadRange: *const D3D12_RANGE = match pReadRangeOpt {
             Some(v) => { v }
             None => { null_mut() }
         };
         unsafe{
-            let mut _unknownobj = null_mut();
-            match self.value.Map(ubresource, pReadRange, &mut _unknownobj).hresult_to_result() {
-                Ok(_) => Ok(&mut *(_unknownobj as *mut T)),
-                Err(v) => Err(v)
-            }
+            self.value.Unmap(subresource,pReadRange)
         }
     }
+
 }
 
 impl<'a> CpIDXGISwapChain4<'a> {
@@ -557,7 +632,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
             match self.value.GetBuffer(buffer, &ID3D12Resource::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12Resource).as_mut() {
-                        Some(id3d12resource) => { return Ok(CpID3D12Resource{value:id3d12resource, data: buffer }); }
+                        Some(id3d12resource) => { return Ok(CpID3D12Resource{value:id3d12resource, data: buffer, destdata: None }); }
                         None => { return Err(v); }
                     }
                 }
@@ -630,6 +705,33 @@ impl<'a> CpID3D12CommandQueue<'a> {
     }
 }
 
+impl<'a> CpID3DBlob<'a> {
+    pub fn cp_d3dcompile_from_file( pFileName: &str,pDefinesOpt: Option<&D3D_SHADER_MACRO>,pIncludeOpt: Option<&mut ID3DInclude>,pEntrypoint: &str,pTarget:  &str,Flags1: UINT,Flags2: UINT)-> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>,HRESULT)>{
+        let mut okBlob:*mut ID3D10Blob = null_mut();
+        let mut errBlob:*mut ID3D10Blob = null_mut();
+        let pDefines: *const D3D_SHADER_MACRO = match pDefinesOpt {
+            Some(v) => { v }
+            None => { null_mut() }
+        };
+        let pInclude: *mut ID3DInclude = match pIncludeOpt {
+            Some(v) => { v }
+            None => { null_mut() }
+        };
+        let CstrpEntrypoint = CString::new(pEntrypoint).expect("CString::new failed");
+        let CstrpTarget = CString::new(pTarget).expect("CString::new failed");
+
+        unsafe{
+             match D3DCompileFromFile(to_wide_chars(pFileName).as_ptr(), pDefines, pInclude, CstrpEntrypoint.as_ptr(), CstrpTarget.as_ptr(), Flags1, Flags2, &mut okBlob, &mut errBlob ).hresult_to_result(){
+                 Ok(_) => {
+                     Ok(CpID3DBlob(okBlob.as_mut().unwrap()))
+                 }
+                 Err(v) => {
+                     Err((CpID3DBlob(errBlob.as_mut().unwrap()),v))
+                 }
+            }
+        }
+    }
+}
 impl<'a> CpID3D12Fence<'a> {
     pub fn cp_get_completed_value(&self) -> u64 {
         unsafe {
