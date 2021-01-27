@@ -1,6 +1,5 @@
 mod Cp_directx12;
 mod gltfimporttest;
-
 use std::io::Error;
 const WINDOW_WIDTH: u32 = 720;
 const WINDOW_HEIGHT: u32 = 480;
@@ -10,29 +9,33 @@ use winapi::um::winnt::{HRESULT, LPCWSTR};
 use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE, TRUE};
 use winapi::shared::windef::{HICON, HWND, RECT, HWND__, POINT};
 use winapi::um::winuser::{MB_OK, MessageBoxW, WM_DESTROY, PostQuitMessage, WNDCLASSEXW, AdjustWindowRect, WS_OVERLAPPEDWINDOW, RegisterClassExW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, WS_VISIBLE, UnregisterClassW, LoadCursorW, IDC_ARROW, CS_OWNDC, AdjustWindowRectEx, ShowWindow, SW_SHOW, PeekMessageW, MSG, TranslateMessage, DispatchMessageW, WM_QUIT, PM_REMOVE, WS_OVERLAPPED};
-use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_RESOURCE_BARRIER, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_FENCE_FLAG_NONE};
+use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_RESOURCE_BARRIER, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_FENCE_FLAG_NONE, D3D12_INPUT_ELEMENT_DESC, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_APPEND_ALIGNED_ELEMENT, D3D_ROOT_SIGNATURE_VERSION_1_0, D3D12_VIEWPORT, D3D12_RECT};
 use winapi::um::d3d12sdklayers::{ID3D12Debug};
 use winapi::shared::dxgi1_6::{IDXGIFactory6};
 use winapi::shared::dxgi1_3::{CreateDXGIFactory2, DXGI_CREATE_FACTORY_DEBUG};
 use winapi::shared::dxgi1_2::{DXGI_SWAP_CHAIN_DESC1, DXGI_SCALING_STRETCH, DXGI_ALPHA_MODE_UNSPECIFIED};
 use winapi::shared::winerror::{S_OK};
-use winapi::um::d3dcommon::{D3D_FEATURE_LEVEL_12_1};
+use winapi::um::d3dcommon::{D3D_FEATURE_LEVEL_12_1, ID3DInclude, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST};
 use winapi::um::libloaderapi::{GetModuleHandleW};
 use winapi::um::unknwnbase::{IUnknown};
 use winapi::Interface;
 use std::ptr::null_mut;
 use winapi::shared::dxgi1_5::IDXGISwapChain4;
-use winapi::shared::dxgiformat::DXGI_FORMAT_R8G8B8A8_UNORM;
+use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32_FLOAT};
 use winapi::shared::dxgi::{DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, DXGI_SWAP_CHAIN_DESC};
 use winapi::shared::dxgitype::{DXGI_USAGE_BACK_BUFFER, DXGI_SAMPLE_DESC};
 use winapi::ctypes::c_void;
-use crate::Cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER};
+use crate::Cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER, CpID3DBlob, CpID3D12RootSignature};
 use crate::Cp_directx12::CpHWND;
 use crate::gltfimporttest::gltfimport;
 use crate::Cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
 use winapi::um::synchapi::{CreateEventA, CreateEventExW, WaitForSingleObject};
 use winapi::um::winbase::INFINITE;
 use winapi::um::handleapi::CloseHandle;
+use winapi::um::d3dcompiler::{D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION};
+use std::ffi::CString;
+use crate::Cp_directx12::cp_default_value::CpD3D12_GRAPHICS_PIPELINE_STATE_DESC;
+use crate::Cp_directx12::cp_default_value::CpD3D12_ROOT_SIGNATURE_DESC;
 
 trait HRESULTChecker {
     fn hresult_to_result(self) -> Result<i32, i32>;
@@ -108,8 +111,75 @@ fn main() {
         let mut handle = _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start();
         _id3d12device.cp_create_render_target_view(&mut _swap_res, None, handle.cp_descriptor_handle_increment_ptr(&_id3d12device, index));
     }
-    let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
+    let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    #[repr(C)]
+    #[derive(Clone, Debug)]
+    struct pointUv(nalgebra::Point3<f32>, nalgebra::Point2<f32>);
+    #[repr(C)]
+    #[derive(Clone, Debug)]
+    struct pointXYZ{x:f32,y:f32,z:f32};
+    let vertices = vec![
+        pointXYZ{x: -1.0,y: -1.0,z: 0.0},
+        pointXYZ{x:  0.0,y:  1.0,z: 0.0},
+        pointXYZ{x:  1.0,y: -1.0,z: 0.0},
+        pointXYZ{x:  1.0,y: 1.0,z: 0.0},
+    ];
+    let (mut CpVertResource,VbView)= _id3d12device.cp_create_buffer_resource(0, vertices.into_boxed_slice()).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    let vertices2 = vec![
+        pointXYZ{x: -1.0,y: -1.0,z: 0.0},
+        pointXYZ{x:  0.0,y:  1.0,z: 0.0},
+        pointXYZ{x:  1.0,y: -1.0,z: 0.0},
+        pointXYZ{x:  1.0,y: 1.0,z: 0.0},
+    ];
+    CpVertResource.cp_copy(None, 0, None);
+    CpVertResource.destdata.unwrap().clone_from(&vertices2.into_boxed_slice());
+    println!("last OS error: {:?}", Error::last_os_error());
+    //CpVertResource.cp_unmap(0, &None);
+
+    let vertIndex = vec![0,1,2,2,1,3];
+    let (mut CpIndexResource,idView)= _id3d12device.cp_create_index_resource(0, vertIndex.into_boxed_slice()).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    let vertIndex2 = vec![0,1,2,2,1,3];
+    CpIndexResource.cp_copy(None, 0, None);
+    println!("last OS error: {:?}", Error::last_os_error());
+    CpIndexResource.cp_unmap(0, &None);
+
+    println!("last OS error: {:?}", Error::last_os_error());
+    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    println!("last OS error: {:?}", Error::last_os_error());
+    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let positionStr = CString::new("POSITION").expect("CString::new failed").into_raw();
+    let inputElementDesc = vec![
+        D3D12_INPUT_ELEMENT_DESC{
+            SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
+            SemanticIndex: 0,
+            Format: DXGI_FORMAT_R32G32B32_FLOAT,
+            InputSlot: 0,
+            AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
+            InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+            InstanceDataStepRate: 0
+        }
+    ];
+    let cp_d3d12_root_signature_desc:CpD3D12_ROOT_SIGNATURE_DESC = Default::default();
+    let rootSigBlob = cp_d3d12_root_signature_desc.cp_d3d12serialize_root_signature(D3D_ROOT_SIGNATURE_VERSION_1_0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    let mut rootsignature = _id3d12device.cp_create_root_signature(0, &rootSigBlob).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    let mut cpgraphicsPipelineStateDesc = CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::create_d3d12_graphics_pipeline_state_desc(&vsBlob, &psBlob, inputElementDesc.into_boxed_slice(), &mut rootsignature, None, None, None);
+    let pipelineState = _id3d12device.cp_create_graphics_pipeline_state(&mut cpgraphicsPipelineStateDesc).unwrap_or_else(|v| { println!("last OS error: {:?}", Error::last_os_error());panic!("last OS error: {:?}", v) });
+    let viewport = D3D12_VIEWPORT{
+        TopLeftX: 0.0,
+        TopLeftY: 0.0,
+        Width: WINDOW_WIDTH as f32,
+        Height: WINDOW_HEIGHT as f32,
+        MinDepth: 0.0,
+        MaxDepth: 1.0
+    };
+    let scissorRect = D3D12_RECT{
+        left: 0,
+        top: 0,
+        right: WINDOW_WIDTH as i32,
+        bottom: WINDOW_HEIGHT as i32
+    };
+
     loop {
         let mut cpmsg = CpMSG::cp_peek_message_w(null_mut(),0,0,PM_REMOVE);
         if cpmsg.hasMessage{
@@ -133,6 +203,15 @@ fn main() {
         let mut current_sw_heaps =  _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start().cp_descriptor_handle_increment_ptr(&_id3d12device,current_buff_index);
         unsafe { _id3d12commanddispacher.command_lists[0].0.OMSetRenderTargets(1, &current_sw_heaps.value, i32::from(true), null_mut()) };
         unsafe { _id3d12commanddispacher.command_lists[0].0.ClearRenderTargetView(current_sw_heaps.value, &clearcolor, 0, null_mut()) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetViewports(1, &viewport) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetScissorRects(1, &scissorRect) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.SetPipelineState( pipelineState.0) }
+        println!("last OS error: {:?}", Error::last_os_error());
+        unsafe { _id3d12commanddispacher.command_lists[0].0.SetGraphicsRootSignature( rootsignature.0) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetVertexBuffers( 0,1,&VbView) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetIndexBuffer( &idView) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.DrawIndexedInstanced( 6,1,0,0,0) }
         transition_barrier_desc.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         transition_barrier_desc.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 

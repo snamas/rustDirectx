@@ -1,10 +1,10 @@
-mod cp_default_value;
+pub(crate) mod cp_default_value;
 
 use winapi::um::winnt::{HRESULT, LPCWSTR, HANDLE, LPCSTR};
 use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE, TRUE, BOOL};
 use winapi::shared::windef::{HICON, HWND, RECT, HWND__, POINT};
 use winapi::um::winuser::{MB_OK, MessageBoxW, WM_DESTROY, PostQuitMessage, WNDCLASSEXW, AdjustWindowRect, WS_OVERLAPPEDWINDOW, RegisterClassExW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, WS_VISIBLE, UnregisterClassW, LoadCursorW, IDC_ARROW, CS_OWNDC, AdjustWindowRectEx, ShowWindow, SW_SHOW, PeekMessageW, MSG, TranslateMessage, DispatchMessageW, WM_QUIT, PM_REMOVE, WS_OVERLAPPED};
-use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, ID3D12Pageable, ID3D12DeviceChild, ID3D12Object, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_DESCRIPTOR_HEAP_TYPE, D3D12_RENDER_TARGET_VIEW_DESC, D3D12_COMMAND_LIST_TYPE, ID3D12PipelineState, D3D12_RESOURCE_BARRIER, ID3D12Fence, D3D12_FENCE_FLAGS, D3D12_RESOURCE_BARRIER_TYPE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_RESOURCE_UAV_BARRIER, D3D12_RESOURCE_STATES, D3D12_RESOURCE_BARRIER_FLAGS, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_u, D3D12_RESOURCE_BARRIER_TYPE_ALIASING, D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_HEAP_PROPERTIES, D3D12_HEAP_FLAGS, D3D12_RESOURCE_DESC, D3D12_CLEAR_VALUE, D3D12_MEMORY_POOL_UNKNOWN, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_HEAP_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RANGE, D3D12_VERTEX_BUFFER_VIEW, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_INDEX_BUFFER_VIEW, D3D12_GRAPHICS_PIPELINE_STATE_DESC, D3D12_SHADER_BYTECODE, D3D12_INPUT_ELEMENT_DESC, D3D12_INPUT_LAYOUT_DESC, D3D_ROOT_SIGNATURE_VERSION, D3D12SerializeRootSignature, ID3D12RootSignature};
+use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, ID3D12Pageable, ID3D12DeviceChild, ID3D12Object, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_DESCRIPTOR_HEAP_TYPE, D3D12_RENDER_TARGET_VIEW_DESC, D3D12_COMMAND_LIST_TYPE, ID3D12PipelineState, D3D12_RESOURCE_BARRIER, ID3D12Fence, D3D12_FENCE_FLAGS, D3D12_RESOURCE_BARRIER_TYPE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_RESOURCE_UAV_BARRIER, D3D12_RESOURCE_STATES, D3D12_RESOURCE_BARRIER_FLAGS, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_u, D3D12_RESOURCE_BARRIER_TYPE_ALIASING, D3D12_RESOURCE_BARRIER_TYPE_UAV, D3D12_HEAP_PROPERTIES, D3D12_HEAP_FLAGS, D3D12_RESOURCE_DESC, D3D12_CLEAR_VALUE, D3D12_MEMORY_POOL_UNKNOWN, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_DIMENSION_BUFFER, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_HEAP_FLAG_NONE, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RANGE, D3D12_VERTEX_BUFFER_VIEW, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_INDEX_BUFFER_VIEW, D3D12_GRAPHICS_PIPELINE_STATE_DESC, D3D12_SHADER_BYTECODE, D3D12_INPUT_ELEMENT_DESC, D3D12_INPUT_LAYOUT_DESC, D3D_ROOT_SIGNATURE_VERSION, D3D12SerializeRootSignature, ID3D12RootSignature, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA};
 use winapi::um::d3d12sdklayers::{ID3D12Debug};
 use winapi::shared::dxgi1_6::{IDXGIFactory6};
 use winapi::shared::dxgi1_3::{CreateDXGIFactory2, DXGI_CREATE_FACTORY_DEBUG};
@@ -16,7 +16,7 @@ use winapi::um::unknwnbase::{IUnknown};
 use winapi::Interface;
 use std::ptr::null_mut;
 use winapi::shared::dxgi1_5::IDXGISwapChain4;
-use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_R16_UINT};
+use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_FORMAT_R16_UINT, DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R32G32B32_FLOAT};
 use winapi::shared::dxgi::{DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, DXGI_SWAP_CHAIN_DESC};
 use winapi::shared::dxgitype::{DXGI_USAGE_BACK_BUFFER, DXGI_SAMPLE_DESC};
 use winapi::ctypes::c_void;
@@ -57,7 +57,7 @@ pub struct CpMSG {
 pub struct CpID3D12Resource<'a, T> {
     pub(crate) value: &'a mut ID3D12Resource,
     data : T,
-    destdata:Option<&'a mut T>
+    pub(crate)destdata:Option<&'a mut T>
 }
 
 pub struct CpID3D12CommandAllocator<'a>(pub(crate) &'a mut ID3D12CommandAllocator);
@@ -227,10 +227,11 @@ impl<'a> CpID3D12Device<'a> {
         };
         unsafe {
             let mut _unknownobj = null_mut();
-            match self.0.CreateCommandList(node_mask, type_, p_command_allocator.0, p_initial_state, &ID3D12GraphicsCommandList::uuidof(), &mut _unknownobj).hresult_to_result() {
+            match self.0.CreateCommandList(node_mask, type_, p_command_allocator.0, null_mut(), &ID3D12GraphicsCommandList::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12GraphicsCommandList).as_mut() {
-                        Some(_id3d12graphics_command_list) => { return Ok(CpID3D12GraphicsCommandList(_id3d12graphics_command_list)); }
+                        Some(_id3d12graphics_command_list) => {
+                            println!("cp_create_command_dispacher4: {:?}", Error::last_os_error()); return Ok(CpID3D12GraphicsCommandList(_id3d12graphics_command_list)); }
                         None => { return Err(v); }
                     }
                 }
@@ -304,9 +305,9 @@ impl<'a> CpID3D12Device<'a> {
              Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
              Alignment: 0,
              Width: std::mem::size_of_val(vertices.as_ref()) as u64,
-             Height: 0,
+             Height: 1,
              DepthOrArraySize: 1,
-             MipLevels: 0,
+             MipLevels: 1,
              Format:DXGI_FORMAT_UNKNOWN,
              SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
              Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
@@ -326,7 +327,7 @@ impl<'a> CpID3D12Device<'a> {
         };
         Ok((vertexRes,vbView))
     }
-    pub fn cp_create_index_resource(&self,nodemask:u32,indices:Box<[u16]>) -> Result<(CpID3D12Resource<Box<[u16]>>,D3D12_INDEX_BUFFER_VIEW), HRESULT>{
+    pub fn cp_create_index_resource(&self,nodemask:u32,indices:Box<[u32]>) -> Result<(CpID3D12Resource<Box<[u32]>>,D3D12_INDEX_BUFFER_VIEW), HRESULT>{
         let heapProperties= D3D12_HEAP_PROPERTIES {
             Type: D3D12_HEAP_TYPE_UPLOAD,
             CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -337,9 +338,9 @@ impl<'a> CpID3D12Device<'a> {
             Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
             Alignment: 0,
             Width: std::mem::size_of_val(indices.as_ref()) as u64,
-            Height: 0,
+            Height: 1,
             DepthOrArraySize: 1,
-            MipLevels: 0,
+            MipLevels: 1,
             Format:DXGI_FORMAT_UNKNOWN,
             SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
             Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
@@ -355,7 +356,7 @@ impl<'a> CpID3D12Device<'a> {
         let  idView = D3D12_INDEX_BUFFER_VIEW{
             BufferLocation: unsafe{indexRes.value.GetGPUVirtualAddress()},
             SizeInBytes: std::mem::size_of_val(indexRes.data.as_ref()) as u32,
-            Format : DXGI_FORMAT_R16_UINT
+            Format : DXGI_FORMAT_R32_UINT
         };
         Ok((indexRes,idView))
     }
@@ -375,7 +376,19 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc:&D3D12_GRAPHICS_PIPELINE_STATE_DESC)-> Result<CpID3D12PipelineState, HRESULT>{
+    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &mut D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT>{
+        let inputElementDesc = [
+            D3D12_INPUT_ELEMENT_DESC {
+                SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
+                SemanticIndex: 0,
+                Format: DXGI_FORMAT_R32G32B32_FLOAT,
+                InputSlot: 0,
+                AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
+                InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+                InstanceDataStepRate: 0
+            }
+        ];
+        d3d12_graphics_pipeline_state_desc.InputLayout=D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: inputElementDesc.as_ptr(), NumElements: inputElementDesc.len() as u32 };
         unsafe {
             let mut _unknownobj = null_mut();
             match self.0.CreateGraphicsPipelineState(d3d12_graphics_pipeline_state_desc,&ID3D12PipelineState::uuidof(),&mut _unknownobj).hresult_to_result() {
@@ -478,7 +491,7 @@ impl CpMSG {
 impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC{
     /// D3D12_GRAPHICS_PIPELINE_STATE_DESCを作るための関数。初期化にいくらか追加しただけの関数なのでいろいろ後で設定しよう
     pub fn create_d3d12_graphics_pipeline_state_desc(vsBlob:&CpID3DBlob, psBlob:&CpID3DBlob, d3d12_input_element_descs:Box<[D3D12_INPUT_ELEMENT_DESC]>, cp_id3d12root_signature:&mut CpID3D12RootSignature, ds_blob_opt:Option<&CpID3DBlob>, hs_blob_opt:Option<&CpID3DBlob>, gs_blob_opt:Option<&CpID3DBlob>) -> D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-        let mut d3d12_graphics_pipeline_state_desc =D3D12_GRAPHICS_PIPELINE_STATE_DESC{
+        let mut d3d12_graphics_pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC{
             VS: D3D12_SHADER_BYTECODE { pShaderBytecode: vsBlob.cp_get_buffer_pointer(), BytecodeLength: vsBlob.cp_get_buffer_size() },
             PS: D3D12_SHADER_BYTECODE { pShaderBytecode: psBlob.cp_get_buffer_pointer(), BytecodeLength: psBlob.cp_get_buffer_size() },
             InputLayout: D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: d3d12_input_element_descs.as_ptr(), NumElements: d3d12_input_element_descs.len() as u32 },
@@ -631,6 +644,7 @@ impl<'a> CpHWND<'a> {
         unsafe { UnregisterClassW(self.1.lpszClassName, self.1.hInstance); }
     }
 }
+///CpID3D12Resourceに渡す構造体はCloneトレイトを実装している必要がある
 impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
     pub fn cp_map(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<&'a mut T, HRESULT> {
         let pReadRange:  *const D3D12_RANGE = match pReadRangeOpt {
@@ -649,7 +663,7 @@ impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
         }
     }
     ///内部でmapを呼び出すことで事前にmapをしなくても良くなった。CpID3D12Resourceを作る際に作ったデータをGPUにコピーする時はcopydataOptはNullを入れてね
-    pub fn cp_copy(&mut self,copydataOpt:&'a Option<T>,subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT>{
+    pub fn cp_copy(&mut self,copydataOpt:Option<& T>,subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT>{
         let copydata = match copydataOpt {
             Some(v) => {v}
             None => {&self.data}
@@ -780,14 +794,10 @@ impl<'a> CpID3D12CommandQueue<'a> {
 }
 
 impl<'a> CpID3DBlob<'a> {
-    pub fn cp_d3dcompile_from_file( pFileName: &str,pDefinesOpt: Option<&D3D_SHADER_MACRO>,pIncludeOpt: Option<&mut ID3DInclude>,pEntrypoint: &str,pTarget:  &str,Flags1: UINT,Flags2: UINT)-> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>,HRESULT)>{
+    pub fn cp_d3dcompile_from_file( pFileName: &str,pDefinesOpt: Option<&D3D_SHADER_MACRO>,pInclude: *mut ID3DInclude,pEntrypoint: &str,pTarget:  &str,Flags1: UINT,Flags2: UINT)-> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>,HRESULT)>{
         let mut okBlob:*mut ID3D10Blob = null_mut();
         let mut errBlob:*mut ID3D10Blob = null_mut();
         let pDefines: *const D3D_SHADER_MACRO = match pDefinesOpt {
-            Some(v) => { v }
-            None => { null_mut() }
-        };
-        let pInclude: *mut ID3DInclude = match pIncludeOpt {
             Some(v) => { v }
             None => { null_mut() }
         };
