@@ -114,10 +114,10 @@ fn main() {
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     #[repr(C)]
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug,Copy)]
     struct pointUv(nalgebra::Point3<f32>, nalgebra::Point2<f32>);
     #[repr(C)]
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug,Copy)]
     struct pointXYZ{x:f32,y:f32,z:f32};
     let vertices = vec![
         pointXYZ{x: -1.0,y: -1.0,z: 0.0},
@@ -125,24 +125,32 @@ fn main() {
         pointXYZ{x:  1.0,y: -1.0,z: 0.0},
         pointXYZ{x:  1.0,y: 1.0,z: 0.0},
     ];
-    let (mut CpVertResource,VbView)= _id3d12device.cp_create_buffer_resource(0, vertices.into_boxed_slice()).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let vertices2 = vec![
+    let vertBox = vertices.into_boxed_slice();
+
+    let (mut CpVertResource,VbView)= _id3d12device.cp_create_buffer_resource(0, vertBox).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+    let vertices2 = [
         pointXYZ{x: -1.0,y: -1.0,z: 0.0},
         pointXYZ{x:  0.0,y:  1.0,z: 0.0},
         pointXYZ{x:  1.0,y: -1.0,z: 0.0},
         pointXYZ{x:  1.0,y: 1.0,z: 0.0},
     ];
-    CpVertResource.cp_copy(None, 0, None);
-    CpVertResource.destdata.unwrap().clone_from(&vertices2.into_boxed_slice());
-    println!("last OS error: {:?}", Error::last_os_error());
+    let mut destdata = CpVertResource.cp_map::<[pointXYZ;4]>(0, None).unwrap();
+    //CpVertResource.destdata.unwrap().clone_from(&vertices2.into_boxed_slice());
+    *destdata = vertices2;
     //CpVertResource.cp_unmap(0, &None);
 
-    let vertIndex = vec![0,1,2,2,1,3];
-    let (mut CpIndexResource,idView)= _id3d12device.cp_create_index_resource(0, vertIndex.into_boxed_slice()).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
+
+
+    let vertIndex = vec![0,1,2,2,1,3].into_boxed_slice();
+    let (mut CpIndexResource,idView)= _id3d12device.cp_create_index_resource(0, vertIndex).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let vertIndex2 = vec![0,1,2,2,1,3];
-    CpIndexResource.cp_copy(None, 0, None);
+    let mut destdataId = CpIndexResource.cp_map::<[u32;6]>(0, None).unwrap();
+    //CpIndexResource.cp_copy(None, 0, None);
+    println!("destdataI: {:?}", destdataId);
+    (*destdataId).copy_from_slice(&vertIndex2);
+
     println!("last OS error: {:?}", Error::last_os_error());
-    CpIndexResource.cp_unmap(0, &None);
+    //CpIndexResource.cp_unmap(0, &None);
 
     println!("last OS error: {:?}", Error::last_os_error());
     let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
@@ -206,7 +214,6 @@ fn main() {
         unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetViewports(1, &viewport) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetScissorRects(1, &scissorRect) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.SetPipelineState( pipelineState.0) }
-        println!("last OS error: {:?}", Error::last_os_error());
         unsafe { _id3d12commanddispacher.command_lists[0].0.SetGraphicsRootSignature( rootsignature.0) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.IASetVertexBuffers( 0,1,&VbView) }

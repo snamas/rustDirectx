@@ -25,6 +25,7 @@ use winapi::um::d3dcompiler::D3DCompileFromFile;
 use std::ffi::CString;
 use crate::Cp_directx12::cp_default_value::{CpD3D12_GRAPHICS_PIPELINE_STATE_DESC, CpD3D12_ROOT_SIGNATURE_DESC};
 use winapi::_core::ptr::null;
+use std::fmt::Debug;
 
 pub struct CpID3D12Device<'a>(pub &'a ID3D12Device);
 
@@ -645,8 +646,8 @@ impl<'a> CpHWND<'a> {
     }
 }
 ///CpID3D12Resourceに渡す構造体はCloneトレイトを実装している必要がある
-impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
-    pub fn cp_map(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<&'a mut T, HRESULT> {
+impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
+    pub fn cp_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<&'a mut S, HRESULT> {
         let pReadRange:  *const D3D12_RANGE = match pReadRangeOpt {
             Some(v) => { &v }
             None => { null_mut() }
@@ -654,9 +655,11 @@ impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
         unsafe{
             let mut _unknownobj = null_mut();
             match self.value.Map(subresource, pReadRange, &mut _unknownobj).hresult_to_result() {
-                Ok(v) => match (_unknownobj as *mut T).as_mut(){
+                Ok(v) => match (_unknownobj as *mut S).as_mut(){
                     None => {Err(v)}
-                    Some( _obj) => {Ok(_obj)}
+                    Some( _obj) => {
+                        Ok(_obj)
+                    }
                 }
                 Err(v) => Err(v)
             }
@@ -673,7 +676,7 @@ impl<'a,T: std::clone::Clone> CpID3D12Resource<'a, T> {
                 (**v).clone_from(copydata);
             }
             None => {
-                let mut dest = self.cp_map(subresource, pReadRangeOpt)?;
+                let mut dest = self.cp_map::<T>(subresource, pReadRangeOpt)?;
                 dest.clone_from(copydata);
                 self.destdata = Some(dest);
             }
