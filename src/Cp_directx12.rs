@@ -57,7 +57,7 @@ pub struct CpMSG {
 
 pub struct CpID3D12Resource<'a, T> {
     pub(crate) value: &'a mut ID3D12Resource,
-    data : T,
+    pub(crate) data : T,
     pub(crate)destdata:Option<&'a mut T>
 }
 
@@ -693,6 +693,13 @@ impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
         }
     }
 
+}
+impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
+    pub fn cp_slice_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>,len:usize) -> Result<&mut [S], HRESULT> {
+        let _arr_obj = self.cp_map::<S>(subresource, pReadRangeOpt)?;
+        let _arr = unsafe {std::slice::from_raw_parts_mut(_arr_obj,len)};
+        Ok(_arr)
+    }
 }
 
 impl<'a> CpIDXGISwapChain4<'a> {

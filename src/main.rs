@@ -139,15 +139,10 @@ fn main() {
     *destdata = vertices2;
     //CpVertResource.cp_unmap(0, &None);
 
-
-
     let vertIndex = vec![0,1,2,2,1,3].into_boxed_slice();
     let (mut CpIndexResource,idView)= _id3d12device.cp_create_index_resource(0, vertIndex).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let vertIndex2 = vec![0,1,2,2,1,3];
-    let mut destdataId = CpIndexResource.cp_map::<[u32;6]>(0, None).unwrap();
-    //CpIndexResource.cp_copy(None, 0, None);
-    println!("destdataI: {:?}", destdataId);
-    (*destdataId).copy_from_slice(&vertIndex2);
+    let mut destdataId = CpIndexResource.cp_slice_map::<u32>(0, None,CpIndexResource.data.len()).unwrap();
+    destdataId.copy_from_slice(&CpIndexResource.data);
 
     println!("last OS error: {:?}", Error::last_os_error());
     //CpIndexResource.cp_unmap(0, &None);
