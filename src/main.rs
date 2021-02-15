@@ -40,6 +40,7 @@ use crate::Cp_directx12::cp_default_value::CpD3D12_GRAPHICS_PIPELINE_STATE_DESC;
 use crate::Cp_directx12::cp_default_value::CpD3D12_ROOT_SIGNATURE_DESC;
 use nalgebra::Point;
 use crate::ShapelVRM::{ShapelObject, DrawObj};
+use std::env;
 
 trait HRESULTChecker {
     fn hresult_to_result(self) -> Result<i32, i32>;
@@ -117,9 +118,9 @@ fn main() {
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     println!("last OS error: {:?}", Error::last_os_error());
-    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     println!("last OS error: {:?}", Error::last_os_error());
-    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let inputElementDesc = vec![
         D3D12_INPUT_ELEMENT_DESC{
             SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
@@ -150,8 +151,10 @@ fn main() {
         right: WINDOW_WIDTH as i32,
         bottom: WINDOW_HEIGHT as i32
     };
-
-    let shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, "C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\shapell_Mtoon.vrm".as_ref());
+    let defstr = "Asset\\shapell_Mtoon.vrm".to_string();
+    let args: Vec<String> = env::args().collect();
+    let query = args.get(1).unwrap_or(&defstr);
+    let shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, query.as_ref());
 
 
     loop {
