@@ -1,8 +1,10 @@
 mod Cp_directx12;
 mod gltfimporttest;
+mod ShapelVRM;
+
 use std::io::Error;
-const WINDOW_WIDTH: u32 = 720;
-const WINDOW_HEIGHT: u32 = 480;
+const WINDOW_WIDTH: u32 = 800;
+const WINDOW_HEIGHT: u32 = 800;
 
 
 use winapi::um::winnt::{HRESULT, LPCWSTR};
@@ -36,6 +38,8 @@ use winapi::um::d3dcompiler::{D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBU
 use std::ffi::CString;
 use crate::Cp_directx12::cp_default_value::CpD3D12_GRAPHICS_PIPELINE_STATE_DESC;
 use crate::Cp_directx12::cp_default_value::CpD3D12_ROOT_SIGNATURE_DESC;
+use nalgebra::Point;
+use crate::ShapelVRM::{ShapelObject, DrawObj};
 
 trait HRESULTChecker {
     fn hresult_to_result(self) -> Result<i32, i32>;
@@ -72,8 +76,6 @@ fn print_message(msg: &str) -> Result<i32, Error> {
 struct Id3d12commandQueue(*mut c_void);
 
 fn main() {
-    gltfimport();
-
 
     let mut _id3d12debug = null_mut();
     unsafe {
@@ -88,6 +90,7 @@ fn main() {
     println!("last OS error: {:?}", Error::last_os_error());
 
     let mut hwnd = CpHWND::new(None, None);
+    ///todo:ここラップする。
     unsafe {
         let mut hwndtmp = &mut hwnd.0;
         ShowWindow(*hwndtmp, SW_SHOW);
@@ -113,45 +116,10 @@ fn main() {
     }
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    #[repr(C)]
-    #[derive(Clone, Debug,Copy)]
-    struct pointUv(nalgebra::Point3<f32>, nalgebra::Point2<f32>);
-    #[repr(C)]
-    #[derive(Clone, Debug,Copy)]
-    struct pointXYZ{x:f32,y:f32,z:f32};
-    let vertices = vec![
-        pointXYZ{x: -1.0,y: -1.0,z: 0.0},
-        pointXYZ{x:  0.0,y:  1.0,z: 0.0},
-        pointXYZ{x:  1.0,y: -1.0,z: 0.0},
-        pointXYZ{x:  1.0,y: 1.0,z: 0.0},
-    ];
-    let vertBox = vertices.into_boxed_slice();
-
-    let (mut CpVertResource,VbView)= _id3d12device.cp_create_buffer_resource(0, vertBox).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let vertices2 = [
-        pointXYZ{x: -1.0,y: -1.0,z: 0.0},
-        pointXYZ{x:  0.0,y:  1.0,z: 0.0},
-        pointXYZ{x:  1.0,y: -1.0,z: 0.0},
-        pointXYZ{x:  1.0,y: 1.0,z: 0.0},
-    ];
-    let mut destdata = CpVertResource.cp_map::<[pointXYZ;4]>(0, None).unwrap();
-    //CpVertResource.destdata.unwrap().clone_from(&vertices2.into_boxed_slice());
-    *destdata = vertices2;
-    //CpVertResource.cp_unmap(0, &None);
-
-    let vertIndex = vec![0,1,2,2,1,3].into_boxed_slice();
-    let (mut CpIndexResource,idView)= _id3d12device.cp_create_index_resource(0, vertIndex).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let mut destdataId = CpIndexResource.cp_slice_map::<u32>(0, None,CpIndexResource.data.len()).unwrap();
-    destdataId.copy_from_slice(&CpIndexResource.data);
-
-    println!("last OS error: {:?}", Error::last_os_error());
-    //CpIndexResource.cp_unmap(0, &None);
-
     println!("last OS error: {:?}", Error::last_os_error());
     let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     println!("last OS error: {:?}", Error::last_os_error());
     let psBlob = CpID3DBlob::cp_d3dcompile_from_file("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
-    let positionStr = CString::new("POSITION").expect("CString::new failed").into_raw();
     let inputElementDesc = vec![
         D3D12_INPUT_ELEMENT_DESC{
             SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
@@ -183,6 +151,9 @@ fn main() {
         bottom: WINDOW_HEIGHT as i32
     };
 
+    let shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, "C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\shapell_Mtoon.vrm".as_ref());
+
+
     loop {
         let mut cpmsg = CpMSG::cp_peek_message_w(null_mut(),0,0,PM_REMOVE);
         if cpmsg.hasMessage{
@@ -211,9 +182,10 @@ fn main() {
         unsafe { _id3d12commanddispacher.command_lists[0].0.SetPipelineState( pipelineState.0) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.SetGraphicsRootSignature( rootsignature.0) }
         unsafe { _id3d12commanddispacher.command_lists[0].0.IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetVertexBuffers( 0,1,&VbView) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetIndexBuffer( &idView) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.DrawIndexedInstanced( 6,1,0,0,0) }
+        ///todo:shapelをここに直接入れてるので何とかする。
+        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetVertexBuffers( 0,1,shapel_object.d3d12_vertex_buffer_view.as_ref()) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetIndexBuffer( shapel_object.d3d12_index_buffer_view.as_ref()) }
+        unsafe { _id3d12commanddispacher.command_lists[0].0.DrawIndexedInstanced( shapel_object.indexcount,1,0,0,0) }
         transition_barrier_desc.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
         transition_barrier_desc.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 

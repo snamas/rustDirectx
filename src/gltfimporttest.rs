@@ -21,8 +21,8 @@ pub fn gltfimport() {
     //ルートディレクトリはrustDirectxです。
     let (document, buffers, images) = gltf::import("C:\\Users\\Desktop\\CLionProjects\\rustDirectx\\src\\Asset\\Box.glb").unwrap_or_else(|x| { panic!("{}", x) });
     println!("{:?}", document);
-    println!("{:?}", buffers);
-    println!("{:?}", images);
+    //println!("{:?}", buffers);
+    //println!("{:?}", images);
     struct pointUv(nalgebra::Point3<f32>, nalgebra::Point2<f32>);
     let vertices = vec![
         pointUv(nalgebra::Point3::new(-1.0, -1.0, 0.0),nalgebra::Point2::new(1.0,1.0)),
@@ -49,10 +49,11 @@ pub fn gltfimport() {
     //     println!("{}",x.name().unwrap_or("Nieq"));
     // });
     //let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
+    let mut vertexes = Vec::<[f32;3]>::new();
     for mesh in gltfbox.meshes() {
         for prim in mesh.primitives() {
             for buff in gltfbox.buffers() {
-                let reader = prim.reader(|x| Some(&buffers[buff.index()]));
+                let reader = prim.reader(|x| Some(&buffers[x.index()]));
                 if let Some(iter) = reader.read_positions() {
                     println!("attributes().dimensions:{:?}", iter);
                     for vertex_position in iter {
@@ -60,7 +61,7 @@ pub fn gltfimport() {
                     }
                 }
                 if let Some(iter) = reader.read_positions() {
-                    println!("attributes().dimensions:{:?}", iter.into_iter().collect::<Vec<[f32;3]>>());
+                    vertexes.append(&mut iter.into_iter().collect::<Vec<[f32; 3]>>());
                 }
 
                 if let Some(iter) = reader.read_indices() {
@@ -72,6 +73,7 @@ pub fn gltfimport() {
             }
         }
     }
+
     println!("mesh.index:{}", gltfbox.meshes().len());
     for scene in gltfbox.scenes() {
         println!("node.len:{}", scene.nodes().len());

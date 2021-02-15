@@ -378,6 +378,7 @@ impl<'a> CpID3D12Device<'a> {
         }
     }
     pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &mut D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT>{
+        ///todo:inputElementDescのアドレスがおかしくなる。現在ここに書いているけど将来的には分ける。
         let inputElementDesc = [
             D3D12_INPUT_ELEMENT_DESC {
                 SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
@@ -666,6 +667,7 @@ impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
         }
     }
     ///内部でmapを呼び出すことで事前にmapをしなくても良くなった。CpID3D12Resourceを作る際に作ったデータをGPUにコピーする時はcopydataOptはNullを入れてね
+    ///todo:ここcopyが正常にできないバグがある
     pub fn cp_copy(&mut self,copydataOpt:Option<& T>,subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT>{
         let copydata = match copydataOpt {
             Some(v) => {v}
@@ -695,9 +697,9 @@ impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
 
 }
 impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
-    pub fn cp_slice_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>,len:usize) -> Result<&mut [S], HRESULT> {
+    pub fn cp_slice_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>,len:impl std::iter::ExactSizeIterator) -> Result<&mut [S], HRESULT>{
         let _arr_obj = self.cp_map::<S>(subresource, pReadRangeOpt)?;
-        let _arr = unsafe {std::slice::from_raw_parts_mut(_arr_obj,len)};
+        let _arr = unsafe {std::slice::from_raw_parts_mut(_arr_obj,len.len())};
         Ok(_arr)
     }
 }
