@@ -88,6 +88,10 @@ fn main() {
             }
         }
     }
+    let stack = 1;
+    let addst = &stack;
+    let heap = Box::new(1);
+    let addhp = &heap;
     println!("last OS error: {:?}", Error::last_os_error());
 
     let mut hwnd = CpHWND::new(None, None);
@@ -107,13 +111,16 @@ fn main() {
         Flags: D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
         NodeMask: 0,
     };
+
     let _id3d12descripterheap_for_swapchain = _id3d12device.cp_create_descriptor_heap(Some(heap_desc_for_swapchain)).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
     //ID3D12ResourceはCPU と GPU の物理メモリまたはヒープへの一般的な読み書きの能力をカプセル化します。
     // シェーダサンプリング用に最適化された多次元データだけでなく、単純なデータの配列を整理して操作するための抽象化が含まれています。
-    for index in (0..swapchain_view_number) {
+    for index in 0..swapchain_view_number {
         let mut _swap_res = _dxgi_swap_chain4.cp_get_buffer(index).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
         let mut handle = _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start();
         _id3d12device.cp_create_render_target_view(&mut _swap_res, None, handle.cp_descriptor_handle_increment_ptr(&_id3d12device, index));
+        drop(_swap_res);
+        println!("last OS error: {:?},ind:{:?}", Error::last_os_error(),index);
     }
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });

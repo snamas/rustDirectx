@@ -33,6 +33,10 @@ pub trait DrawObj{
 struct pointOnly(nalgebra::Point3<f32>);
 impl DrawObj for ShapelObject{
     fn new(cp_id3d12device: &CpID3D12Device,cp_id3d12command_queue: &CpID3D12CommandQueue,model_path:&Path) ->ShapelObject{
+        let stack = 1;
+        let addst = &stack;
+        let heap = Box::new(1);
+        let addhp = &heap;
         let (document, buffers, images) = gltf::import(model_path).unwrap_or_else(|x| { panic!("{}", x) });
 
         let mut vertexes_pos = Vec::<[f32;3]>::new();

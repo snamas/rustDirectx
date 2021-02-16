@@ -27,24 +27,24 @@ use crate::Cp_directx12::cp_default_value::{CpD3D12_GRAPHICS_PIPELINE_STATE_DESC
 use winapi::_core::ptr::null;
 use std::fmt::Debug;
 
-pub struct CpID3D12Device<'a>(pub &'a ID3D12Device);
+pub struct CpID3D12Device(pub Box<ID3D12Device>);
 
 pub struct CpID3DBlob<'a>(pub &'a ID3DBlob);
 
-pub struct CpID3D12CommandQueue<'a> {
-    pub(crate) value: &'a mut ID3D12CommandQueue,
+pub struct CpID3D12CommandQueue {
+    pub(crate) value: Box<ID3D12CommandQueue>,
     type_: D3D12_COMMAND_LIST_TYPE,
 }
 
-pub struct CpIDXGIFactory6<'a>(pub &'a IDXGIFactory6);
+pub struct CpIDXGIFactory6(pub Box<IDXGIFactory6>);
 
 pub struct CpIDXGISwapChain4<'a> {
     pub value: &'a IDXGISwapChain4,
     pub desc: DXGI_SWAP_CHAIN_DESC1,
 }
 
-pub struct CpID3D12DescriptorHeap<'a> {
-    value: &'a ID3D12DescriptorHeap,
+pub struct CpID3D12DescriptorHeap {
+    value: Box<ID3D12DescriptorHeap>,
     desc: D3D12_DESCRIPTOR_HEAP_DESC,
 }
 
@@ -56,17 +56,20 @@ pub struct CpMSG {
 }
 
 pub struct CpID3D12Resource<'a, T> {
+    ///todo:ID3D12Resourceはヒープ領域に確保されているはず。Boxにしたらdrop時にエラーが発生する
     pub(crate) value: &'a mut ID3D12Resource,
-    pub(crate) data : T,
-    pub(crate)destdata:Option<&'a mut T>
+    pub(crate) data: T,
+    pub(crate) destdata: Option<&'a mut T>,
 }
 
-pub struct CpID3D12CommandAllocator<'a>(pub(crate) &'a mut ID3D12CommandAllocator);
+pub struct CpID3D12CommandAllocator(pub(crate) Box<ID3D12CommandAllocator>);
 
-pub struct CpID3D12GraphicsCommandList<'a>(pub &'a mut ID3D12GraphicsCommandList);
+pub struct CpID3D12GraphicsCommandList(pub Box<ID3D12GraphicsCommandList>);
 
 pub struct CpD3D12_RESOURCE_BARRIER<'a>(pub &'a mut D3D12_RESOURCE_BARRIER);
+
 pub struct CpID3D12RootSignature<'a>(pub &'a mut ID3D12RootSignature);
+
 pub struct CpID3D12PipelineState<'a>(pub &'a mut ID3D12PipelineState);
 
 pub struct CpID3D12Fence<'a> {
@@ -80,9 +83,9 @@ pub struct CpD3D12_CPU_DESCRIPTOR_HANDLE {
 }
 
 pub struct CpID3D12CommandDispacher<'a> {
-    command_queue: &'a CpID3D12CommandQueue<'a>,
-    pub command_allocator: CpID3D12CommandAllocator<'a>,
-    pub command_lists: Vec<CpID3D12GraphicsCommandList<'a>>,
+    command_queue: &'a CpID3D12CommandQueue,
+    pub command_allocator: CpID3D12CommandAllocator,
+    pub command_lists: Vec<CpID3D12GraphicsCommandList>,
 }
 
 impl CpD3D12_CPU_DESCRIPTOR_HANDLE {
@@ -94,6 +97,7 @@ impl CpD3D12_CPU_DESCRIPTOR_HANDLE {
         return newHandle;
     }
 }
+
 // pub fn cp_descriptor_handle_increment_ptr (&self, handle:&mut D3D12_CPU_DESCRIPTOR_HANDLE, index:u32, DescriptorHeapType: D3D12_DESCRIPTOR_HEAP_TYPE) -> &mut D3D12_CPU_DESCRIPTOR_HANDLE {
 //     handle.ptr += (index * self.cp_get_descriptor_handle_increment_size(DescriptorHeapType)) as usize;
 //     return handle;
@@ -131,8 +135,8 @@ impl BOOLTranslater for BOOL {
     }
 }
 
-impl<'a> CpID3D12Device<'a> {
-    pub fn new() -> CpID3D12Device<'a> {
+impl CpID3D12Device {
+    pub fn new() -> CpID3D12Device {
         match CpID3D12Device::cp_d3d12create_device_result() {
             Ok(v) => return v,
             Err(v) => {
@@ -141,14 +145,14 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    fn cp_d3d12create_device_result() -> Result<CpID3D12Device<'a>, HRESULT> {
+    fn cp_d3d12create_device_result() -> Result<CpID3D12Device, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
             match D3D12CreateDevice(null_mut(), D3D_FEATURE_LEVEL_12_1, &ID3D12Device::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     let mut _id3d12deviceOpt = (_unknownobj as *const ID3D12Device).as_ref();
                     match _id3d12deviceOpt {
-                        Some(v) => return Ok(CpID3D12Device(v)),
+                        Some(v) => return Ok(CpID3D12Device(std::mem::transmute(v))),
                         None => return Err(v)
                     };
                 }
@@ -156,7 +160,7 @@ impl<'a> CpID3D12Device<'a> {
             };
         }
     }
-    pub fn cp_create_command_queue(&self, d3d12command_queue_desc_opt: Option<D3D12_COMMAND_QUEUE_DESC>) -> Result<CpID3D12CommandQueue<'a>, HRESULT> {
+    pub fn cp_create_command_queue(&self, d3d12command_queue_desc_opt: Option<D3D12_COMMAND_QUEUE_DESC>) -> Result<CpID3D12CommandQueue, HRESULT> {
         let d3d12command_queue_desc = match d3d12command_queue_desc_opt {
             Some(v) => { v }
             None => {
@@ -174,7 +178,7 @@ impl<'a> CpID3D12Device<'a> {
                 Ok(v) => {
                     let mut _id3d12_command_queue = (_unknownobj as *mut ID3D12CommandQueue).as_mut();
                     match _id3d12_command_queue {
-                        Some(v) => return Ok(CpID3D12CommandQueue { value: v, type_: d3d12command_queue_desc.Type }),
+                        Some(v) => return Ok(CpID3D12CommandQueue { value: std::mem::transmute(v), type_: d3d12command_queue_desc.Type }),
                         None => return Err(v)
                     };
                 }
@@ -182,7 +186,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_descriptor_heap(&self, heap_desc_for_swapchain_opt: Option<D3D12_DESCRIPTOR_HEAP_DESC>) -> Result<CpID3D12DescriptorHeap<'a>, HRESULT> {
+    pub fn cp_create_descriptor_heap(&self, heap_desc_for_swapchain_opt: Option<D3D12_DESCRIPTOR_HEAP_DESC>) -> Result<CpID3D12DescriptorHeap, HRESULT> {
         let heap_desc_for_swapchain = match heap_desc_for_swapchain_opt {
             Some(v) => { v }
             None => {
@@ -199,7 +203,7 @@ impl<'a> CpID3D12Device<'a> {
             match self.0.CreateDescriptorHeap(&heap_desc_for_swapchain, &ID3D12DescriptorHeap::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12DescriptorHeap).as_ref() {
-                        Some(_id3d12descripterheap_for_swapchain) => { return Ok(CpID3D12DescriptorHeap { value: _id3d12descripterheap_for_swapchain, desc: heap_desc_for_swapchain }); }
+                        Some(_id3d12descripterheap_for_swapchain) => { return Ok(CpID3D12DescriptorHeap { value: std::mem::transmute(_id3d12descripterheap_for_swapchain), desc: heap_desc_for_swapchain }); }
                         None => { return Err(v); }
                     }
                 }
@@ -207,13 +211,13 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_command_allocator(&self, type_: D3D12_COMMAND_LIST_TYPE) -> Result<CpID3D12CommandAllocator<'a>, HRESULT> {
+    pub fn cp_create_command_allocator(&self, type_: D3D12_COMMAND_LIST_TYPE) -> Result<CpID3D12CommandAllocator, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
             match self.0.CreateCommandAllocator(type_, &ID3D12CommandAllocator::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12CommandAllocator).as_mut() {
-                        Some(_id3d12command_allocator) => { return Ok(CpID3D12CommandAllocator(_id3d12command_allocator)); }
+                        Some(_id3d12command_allocator) => { return Ok(CpID3D12CommandAllocator(std::mem::transmute(_id3d12command_allocator))); }
                         None => { return Err(v); }
                     }
                 }
@@ -221,18 +225,20 @@ impl<'a> CpID3D12Device<'a> {
             };
         }
     }
-    pub fn cp_create_command_list(&self, node_mask: UINT, type_: D3D12_COMMAND_LIST_TYPE, p_command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<CpID3D12GraphicsCommandList<'a>, HRESULT> {
+    pub fn cp_create_command_list(&self, node_mask: UINT, type_: D3D12_COMMAND_LIST_TYPE, p_command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<CpID3D12GraphicsCommandList, HRESULT> {
         let p_initial_state: *mut ID3D12PipelineState = match p_initial_state_opt {
             Some(v) => { v }
             None => { null_mut() }
         };
         unsafe {
             let mut _unknownobj = null_mut();
-            match self.0.CreateCommandList(node_mask, type_, p_command_allocator.0, null_mut(), &ID3D12GraphicsCommandList::uuidof(), &mut _unknownobj).hresult_to_result() {
+            match self.0.CreateCommandList(node_mask, type_, p_command_allocator.0.as_mut(), null_mut(), &ID3D12GraphicsCommandList::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12GraphicsCommandList).as_mut() {
                         Some(_id3d12graphics_command_list) => {
-                            println!("cp_create_command_dispacher4: {:?}", Error::last_os_error()); return Ok(CpID3D12GraphicsCommandList(_id3d12graphics_command_list)); }
+                            println!("cp_create_command_dispacher4: {:?}", Error::last_os_error());
+                            return Ok(CpID3D12GraphicsCommandList( std::mem::transmute(_id3d12graphics_command_list) ));
+                        }
                         None => { return Err(v); }
                     }
                 }
@@ -240,13 +246,13 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_command_dispacher(&self, node_mask: UINT, cp_id3d12command_queue: &'a CpID3D12CommandQueue<'a>, listnum: u32, mut p_initial_state_opt: Option<ID3D12PipelineState>) -> Result<CpID3D12CommandDispacher<'a>, HRESULT> {
+    pub fn cp_create_command_dispacher<'a>(&self, node_mask: UINT, cp_id3d12command_queue: &'a CpID3D12CommandQueue, listnum: u32, mut p_initial_state_opt: Option<ID3D12PipelineState>) -> Result<CpID3D12CommandDispacher<'a>, HRESULT> {
         let mut _id3d12command_allocator = self.cp_create_command_allocator(cp_id3d12command_queue.type_)?;
         let mut command_lists = (0..listnum).map(|index| -> CpID3D12GraphicsCommandList {
             self.cp_create_command_list(node_mask, cp_id3d12command_queue.type_, &mut _id3d12command_allocator, &mut p_initial_state_opt).unwrap_or_else(|v| { panic!("{}", v) })
         }).collect();
         return Ok(CpID3D12CommandDispacher {
-            command_queue: &cp_id3d12command_queue,
+            command_queue: cp_id3d12command_queue,
             command_allocator: _id3d12command_allocator,
             command_lists: command_lists,
         });
@@ -275,7 +281,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_committed_resource<T>(&self,pHeapProperties: &D3D12_HEAP_PROPERTIES,HeapFlags: D3D12_HEAP_FLAGS,pResourceDesc: &D3D12_RESOURCE_DESC,InitialResourceState: D3D12_RESOURCE_STATES,pOptimizedClearValueOpt: &Option<D3D12_CLEAR_VALUE>,data:T) -> Result<CpID3D12Resource< T>, HRESULT> {
+    pub fn cp_create_committed_resource<T>(&self, pHeapProperties: &D3D12_HEAP_PROPERTIES, HeapFlags: D3D12_HEAP_FLAGS, pResourceDesc: &D3D12_RESOURCE_DESC, InitialResourceState: D3D12_RESOURCE_STATES, pOptimizedClearValueOpt: &Option<D3D12_CLEAR_VALUE>, data: T) -> Result<CpID3D12Resource<T>, HRESULT> {
         let pOptimizedClearValue: *const D3D12_CLEAR_VALUE = match pOptimizedClearValueOpt {
             Some(v) => { v }
             None => { null_mut() }
@@ -286,7 +292,7 @@ impl<'a> CpID3D12Device<'a> {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12Resource).as_mut() {
                         Some(_id3d12_resorce) => {
-                            return Ok(CpID3D12Resource{value:_id3d12_resorce,data, destdata: None }) }
+                            return Ok(CpID3D12Resource { value: std::mem::transmute(_id3d12_resorce), data, destdata: None }); }
 
                         None => { return Err(v); }
                     }
@@ -295,80 +301,82 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_buffer_resource<T>(&self,nodemask:u32,vertices:Box<[T]>) -> Result<(CpID3D12Resource<Box<[T]>>,D3D12_VERTEX_BUFFER_VIEW), HRESULT>{
-        let heapProperties= D3D12_HEAP_PROPERTIES {
+    pub fn cp_create_buffer_resource<T>(&self, nodemask: u32, vertices: Box<[T]>) -> Result<(CpID3D12Resource<Box<[T]>>, D3D12_VERTEX_BUFFER_VIEW), HRESULT> {
+        let heapProperties = D3D12_HEAP_PROPERTIES {
             Type: D3D12_HEAP_TYPE_UPLOAD,
             CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
             MemoryPoolPreference: D3D12_MEMORY_POOL_UNKNOWN,
             CreationNodeMask: nodemask,
-            VisibleNodeMask: nodemask };
-         let resourceDesc = D3D12_RESOURCE_DESC{
-             Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
-             Alignment: 0,
-             Width: std::mem::size_of_val(vertices.as_ref()) as u64,
-             Height: 1,
-             DepthOrArraySize: 1,
-             MipLevels: 1,
-             Format:DXGI_FORMAT_UNKNOWN,
-             SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
-             Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-             Flags: D3D12_RESOURCE_FLAG_NONE
-         };
+            VisibleNodeMask: nodemask,
+        };
+        let resourceDesc = D3D12_RESOURCE_DESC {
+            Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
+            Alignment: 0,
+            Width: std::mem::size_of_val(vertices.as_ref()) as u64,
+            Height: 1,
+            DepthOrArraySize: 1,
+            MipLevels: 1,
+            Format: DXGI_FORMAT_UNKNOWN,
+            SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+            Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+            Flags: D3D12_RESOURCE_FLAG_NONE,
+        };
         let vertexRes = self.cp_create_committed_resource(
             &heapProperties,
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
-            &None,vertices)?;
+            &None, vertices)?;
 
-        let  vbView = D3D12_VERTEX_BUFFER_VIEW{
-            BufferLocation: unsafe{vertexRes.value.GetGPUVirtualAddress()},
+        let vbView = D3D12_VERTEX_BUFFER_VIEW {
+            BufferLocation: unsafe { vertexRes.value.GetGPUVirtualAddress() },
             SizeInBytes: std::mem::size_of_val(vertexRes.data.as_ref()) as u32,
-            StrideInBytes: std::mem::size_of_val(vertexRes.data.first().ok_or(S_OK)?) as u32
+            StrideInBytes: std::mem::size_of_val(vertexRes.data.first().ok_or(S_OK)?) as u32,
         };
-        Ok((vertexRes,vbView))
+        Ok((vertexRes, vbView))
     }
-    pub fn cp_create_index_resource(&self,nodemask:u32,indices:Box<[u32]>) -> Result<(CpID3D12Resource<Box<[u32]>>,D3D12_INDEX_BUFFER_VIEW), HRESULT>{
-        let heapProperties= D3D12_HEAP_PROPERTIES {
+    pub fn cp_create_index_resource(&self, nodemask: u32, indices: Box<[u32]>) -> Result<(CpID3D12Resource<Box<[u32]>>, D3D12_INDEX_BUFFER_VIEW), HRESULT> {
+        let heapProperties = D3D12_HEAP_PROPERTIES {
             Type: D3D12_HEAP_TYPE_UPLOAD,
             CPUPageProperty: D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
             MemoryPoolPreference: D3D12_MEMORY_POOL_UNKNOWN,
             CreationNodeMask: nodemask,
-            VisibleNodeMask: nodemask };
-        let resourceDesc = D3D12_RESOURCE_DESC{
+            VisibleNodeMask: nodemask,
+        };
+        let resourceDesc = D3D12_RESOURCE_DESC {
             Dimension: D3D12_RESOURCE_DIMENSION_BUFFER,
             Alignment: 0,
             Width: std::mem::size_of_val(indices.as_ref()) as u64,
             Height: 1,
             DepthOrArraySize: 1,
             MipLevels: 1,
-            Format:DXGI_FORMAT_UNKNOWN,
+            Format: DXGI_FORMAT_UNKNOWN,
             SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
             Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-            Flags: D3D12_RESOURCE_FLAG_NONE
+            Flags: D3D12_RESOURCE_FLAG_NONE,
         };
         let indexRes = self.cp_create_committed_resource(
             &heapProperties,
             D3D12_HEAP_FLAG_NONE,
             &resourceDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
-            &None,indices)?;
+            &None, indices)?;
 
-        let  idView = D3D12_INDEX_BUFFER_VIEW{
-            BufferLocation: unsafe{indexRes.value.GetGPUVirtualAddress()},
+        let idView = D3D12_INDEX_BUFFER_VIEW {
+            BufferLocation: unsafe { indexRes.value.GetGPUVirtualAddress() },
             SizeInBytes: std::mem::size_of_val(indexRes.data.as_ref()) as u32,
-            Format : DXGI_FORMAT_R32_UINT
+            Format: DXGI_FORMAT_R32_UINT,
         };
-        Ok((indexRes,idView))
+        Ok((indexRes, idView))
     }
-    pub fn cp_create_root_signature(&self, nodeMask:u32, cpid3dblob:&CpID3DBlob) -> Result<CpID3D12RootSignature, HRESULT> {
+    pub fn cp_create_root_signature(&self, nodeMask: u32, cpid3dblob: &CpID3DBlob) -> Result<CpID3D12RootSignature, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
             match self.0.CreateRootSignature(nodeMask, cpid3dblob.cp_get_buffer_pointer(), cpid3dblob.cp_get_buffer_size(), &ID3D12RootSignature::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12RootSignature).as_mut() {
                         Some(_ID3D12RootSignature) => {
-                            return Ok(CpID3D12RootSignature(_ID3D12RootSignature)) }
+                            return Ok(CpID3D12RootSignature(_ID3D12RootSignature)); }
 
                         None => { return Err(v); }
                     }
@@ -377,7 +385,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &mut D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT>{
+    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &mut D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT> {
         ///todo:inputElementDescのアドレスがおかしくなる。現在ここに書いているけど将来的には分ける。
         let inputElementDesc = [
             D3D12_INPUT_ELEMENT_DESC {
@@ -387,17 +395,17 @@ impl<'a> CpID3D12Device<'a> {
                 InputSlot: 0,
                 AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
                 InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-                InstanceDataStepRate: 0
+                InstanceDataStepRate: 0,
             }
         ];
-        d3d12_graphics_pipeline_state_desc.InputLayout=D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: inputElementDesc.as_ptr(), NumElements: inputElementDesc.len() as u32 };
+        d3d12_graphics_pipeline_state_desc.InputLayout = D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: inputElementDesc.as_ptr(), NumElements: inputElementDesc.len() as u32 };
         unsafe {
             let mut _unknownobj = null_mut();
-            match self.0.CreateGraphicsPipelineState(d3d12_graphics_pipeline_state_desc,&ID3D12PipelineState::uuidof(),&mut _unknownobj).hresult_to_result() {
+            match self.0.CreateGraphicsPipelineState(d3d12_graphics_pipeline_state_desc, &ID3D12PipelineState::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12PipelineState).as_mut() {
                         Some(_ID3D12PipelineState) => {
-                            return Ok(CpID3D12PipelineState(_ID3D12PipelineState))
+                            return Ok(CpID3D12PipelineState(_ID3D12PipelineState));
                         }
                         None => { return Err(v); }
                     }
@@ -408,20 +416,20 @@ impl<'a> CpID3D12Device<'a> {
     }
 }
 
-impl<'a> CpIDXGIFactory6<'a> {
-    pub fn new() -> CpIDXGIFactory6<'a> {
+impl CpIDXGIFactory6 {
+    pub fn new() -> CpIDXGIFactory6 {
         match CpIDXGIFactory6::cp_create_dxgifactory2_result() {
             Ok(v) => return v,
             Err(v) => panic!("{}", v)
         }
     }
-    fn cp_create_dxgifactory2_result() -> Result<CpIDXGIFactory6<'a>, HRESULT> {
+    fn cp_create_dxgifactory2_result() -> Result<CpIDXGIFactory6, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
             match CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, &IDXGIFactory6::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *const IDXGIFactory6).as_ref() {
-                        Some(_dxgi_factory) => return Ok(CpIDXGIFactory6(_dxgi_factory)),
+                        Some(_dxgi_factory) => return Ok(CpIDXGIFactory6(std::mem::transmute(_dxgi_factory))),
                         None => return Err(v)
                     };
                 }
@@ -429,7 +437,7 @@ impl<'a> CpIDXGIFactory6<'a> {
             }
         }
     }
-    pub fn cp_create_swap_chain_for_hwnd(&self, _que: &mut CpID3D12CommandQueue, hwnd: &mut CpHWND, dxgi_swap_chain_desc1_opt: Option<DXGI_SWAP_CHAIN_DESC1>) -> Result<CpIDXGISwapChain4<'a>, HRESULT> {
+    pub fn cp_create_swap_chain_for_hwnd(&self, _que: &mut CpID3D12CommandQueue, hwnd: &mut CpHWND, dxgi_swap_chain_desc1_opt: Option<DXGI_SWAP_CHAIN_DESC1>) -> Result<CpIDXGISwapChain4, HRESULT> {
         let dxgi_swap_chain_desc1 = match dxgi_swap_chain_desc1_opt {
             Some(v) => { v }
             None => {
@@ -450,7 +458,7 @@ impl<'a> CpIDXGIFactory6<'a> {
         };
         unsafe {
             let mut _unknownobj = null_mut();
-            match self.0.CreateSwapChainForHwnd(_que.value as *mut ID3D12CommandQueue as *mut IUnknown, hwnd.0, &dxgi_swap_chain_desc1, null_mut(), null_mut(), &mut _unknownobj).hresult_to_result() {
+            match self.0.CreateSwapChainForHwnd(_que.value.as_mut() as *mut ID3D12CommandQueue as *mut IUnknown, hwnd.0, &dxgi_swap_chain_desc1, null_mut(), null_mut(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut IDXGISwapChain4).as_ref() {
                         Some(_dxgi_swap_chain4) => { return Ok(CpIDXGISwapChain4 { value: _dxgi_swap_chain4, desc: dxgi_swap_chain_desc1 }); }
@@ -490,30 +498,31 @@ impl CpMSG {
     }
 }
 
-impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC{
+impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC {
     /// D3D12_GRAPHICS_PIPELINE_STATE_DESCを作るための関数。初期化にいくらか追加しただけの関数なのでいろいろ後で設定しよう
-    pub fn create_d3d12_graphics_pipeline_state_desc(vsBlob:&CpID3DBlob, psBlob:&CpID3DBlob, d3d12_input_element_descs:Box<[D3D12_INPUT_ELEMENT_DESC]>, cp_id3d12root_signature:&mut CpID3D12RootSignature, ds_blob_opt:Option<&CpID3DBlob>, hs_blob_opt:Option<&CpID3DBlob>, gs_blob_opt:Option<&CpID3DBlob>) -> D3D12_GRAPHICS_PIPELINE_STATE_DESC {
-        let mut d3d12_graphics_pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC{
+    pub fn create_d3d12_graphics_pipeline_state_desc(vsBlob: &CpID3DBlob, psBlob: &CpID3DBlob, d3d12_input_element_descs: Box<[D3D12_INPUT_ELEMENT_DESC]>, cp_id3d12root_signature: &mut CpID3D12RootSignature, ds_blob_opt: Option<&CpID3DBlob>, hs_blob_opt: Option<&CpID3DBlob>, gs_blob_opt: Option<&CpID3DBlob>) -> D3D12_GRAPHICS_PIPELINE_STATE_DESC {
+        let mut d3d12_graphics_pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
             VS: D3D12_SHADER_BYTECODE { pShaderBytecode: vsBlob.cp_get_buffer_pointer(), BytecodeLength: vsBlob.cp_get_buffer_size() },
             PS: D3D12_SHADER_BYTECODE { pShaderBytecode: psBlob.cp_get_buffer_pointer(), BytecodeLength: psBlob.cp_get_buffer_size() },
             InputLayout: D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: d3d12_input_element_descs.as_ptr(), NumElements: d3d12_input_element_descs.len() as u32 },
-            pRootSignature:cp_id3d12root_signature.0,
+            pRootSignature: cp_id3d12root_signature.0,
             ..CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::default().0
         };
-        if let Some(ds_blob)= ds_blob_opt {
-            d3d12_graphics_pipeline_state_desc.DS=D3D12_SHADER_BYTECODE { pShaderBytecode: ds_blob.cp_get_buffer_pointer(), BytecodeLength: ds_blob.cp_get_buffer_size() }
+        if let Some(ds_blob) = ds_blob_opt {
+            d3d12_graphics_pipeline_state_desc.DS = D3D12_SHADER_BYTECODE { pShaderBytecode: ds_blob.cp_get_buffer_pointer(), BytecodeLength: ds_blob.cp_get_buffer_size() }
         }
-        if let Some(hs_blob)= hs_blob_opt {
-            d3d12_graphics_pipeline_state_desc.HS=D3D12_SHADER_BYTECODE { pShaderBytecode: hs_blob.cp_get_buffer_pointer(), BytecodeLength: hs_blob.cp_get_buffer_size() }
+        if let Some(hs_blob) = hs_blob_opt {
+            d3d12_graphics_pipeline_state_desc.HS = D3D12_SHADER_BYTECODE { pShaderBytecode: hs_blob.cp_get_buffer_pointer(), BytecodeLength: hs_blob.cp_get_buffer_size() }
         }
-        if let Some(gs_blob)= gs_blob_opt {
-            d3d12_graphics_pipeline_state_desc.GS=D3D12_SHADER_BYTECODE { pShaderBytecode: gs_blob.cp_get_buffer_pointer(), BytecodeLength: gs_blob.cp_get_buffer_size() }
+        if let Some(gs_blob) = gs_blob_opt {
+            d3d12_graphics_pipeline_state_desc.GS = D3D12_SHADER_BYTECODE { pShaderBytecode: gs_blob.cp_get_buffer_pointer(), BytecodeLength: gs_blob.cp_get_buffer_size() }
         }
         d3d12_graphics_pipeline_state_desc
     }
 }
-impl CpD3D12_ROOT_SIGNATURE_DESC{
-    pub fn cp_d3d12serialize_root_signature<'a>(&self, version:D3D_ROOT_SIGNATURE_VERSION) ->Result<CpID3DBlob<'a>, (CpID3DBlob<'a>, HRESULT)> {
+
+impl CpD3D12_ROOT_SIGNATURE_DESC {
+    pub fn cp_d3d12serialize_root_signature<'a>(&self, version: D3D_ROOT_SIGNATURE_VERSION) -> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>, HRESULT)> {
         let mut okBlob: *mut ID3D10Blob = null_mut();
         let mut errBlob: *mut ID3D10Blob = null_mut();
         unsafe {
@@ -530,6 +539,7 @@ pub enum CpD3d12ResourceBarrierDescType {
     CpD3d12ResourceAliasingBarrier { d3d12_resource_aliasing_barrier: D3D12_RESOURCE_ALIASING_BARRIER, flags: D3D12_RESOURCE_BARRIER_FLAGS },
     CpD3D12_RESOURCE_UAV_BARRIER { d3d12_resource_uav_barrier: D3D12_RESOURCE_UAV_BARRIER, flags: D3D12_RESOURCE_BARRIER_FLAGS },
 }
+
 impl<'a> CpD3D12_RESOURCE_BARRIER<'a> {
     ///リソースバリアのタイプで返すD3D12_RESOURCE_BARRIER構造体の共用体部分を決める
     pub fn new(desc_type: CpD3d12ResourceBarrierDescType) -> D3D12_RESOURCE_BARRIER {
@@ -646,19 +656,20 @@ impl<'a> CpHWND<'a> {
         unsafe { UnregisterClassW(self.1.lpszClassName, self.1.hInstance); }
     }
 }
+
 ///CpID3D12Resourceに渡す構造体はCloneトレイトを実装している必要がある
-impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
+impl<'a, T: std::clone::Clone + Debug> CpID3D12Resource<'a, T> {
     pub fn cp_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<&'a mut S, HRESULT> {
-        let pReadRange:  *const D3D12_RANGE = match pReadRangeOpt {
+        let pReadRange: *const D3D12_RANGE = match pReadRangeOpt {
             Some(v) => { &v }
             None => { null_mut() }
         };
-        unsafe{
+        unsafe {
             let mut _unknownobj = null_mut();
             match self.value.Map(subresource, pReadRange, &mut _unknownobj).hresult_to_result() {
-                Ok(v) => match (_unknownobj as *mut S).as_mut(){
-                    None => {Err(v)}
-                    Some( _obj) => {
+                Ok(v) => match (_unknownobj as *mut S).as_mut() {
+                    None => { Err(v) }
+                    Some(_obj) => {
                         Ok(_obj)
                     }
                 }
@@ -668,12 +679,12 @@ impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
     }
     ///内部でmapを呼び出すことで事前にmapをしなくても良くなった。CpID3D12Resourceを作る際に作ったデータをGPUにコピーする時はcopydataOptはNullを入れてね
     ///todo:ここcopyが正常にできないバグがある
-    pub fn cp_copy(&mut self,copydataOpt:Option<& T>,subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT>{
+    pub fn cp_copy(&mut self, copydataOpt: Option<&T>, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>) -> Result<HRESULT, HRESULT> {
         let copydata = match copydataOpt {
-            Some(v) => {v}
-            None => {&self.data}
+            Some(v) => { v }
+            None => { &self.data }
         };
-        match &mut self.destdata{
+        match &mut self.destdata {
             Some(v) => {
                 (**v).clone_from(copydata);
             }
@@ -685,21 +696,21 @@ impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
         };
         Ok(S_OK)
     }
-    pub fn cp_unmap(&self, subresource: UINT, pReadRangeOpt: &Option<D3D12_RANGE>){
+    pub fn cp_unmap(&self, subresource: UINT, pReadRangeOpt: &Option<D3D12_RANGE>) {
         let pReadRange: *const D3D12_RANGE = match pReadRangeOpt {
             Some(v) => { v }
             None => { null_mut() }
         };
-        unsafe{
-            self.value.Unmap(subresource,pReadRange)
+        unsafe {
+            self.value.Unmap(subresource, pReadRange)
         }
     }
-
 }
-impl<'a,T: std::clone::Clone+ Debug> CpID3D12Resource<'a, T> {
-    pub fn cp_slice_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>,len:impl std::iter::ExactSizeIterator) -> Result<&mut [S], HRESULT>{
+
+impl<'a, T: std::clone::Clone + Debug> CpID3D12Resource<'a, T> {
+    pub fn cp_slice_map<S>(&self, subresource: UINT, pReadRangeOpt: Option<D3D12_RANGE>, len: impl std::iter::ExactSizeIterator) -> Result<&mut [S], HRESULT> {
         let _arr_obj = self.cp_map::<S>(subresource, pReadRangeOpt)?;
-        let _arr = unsafe {std::slice::from_raw_parts_mut(_arr_obj,len.len())};
+        let _arr = unsafe { std::slice::from_raw_parts_mut(_arr_obj, len.len()) };
         Ok(_arr)
     }
 }
@@ -732,7 +743,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
             match self.value.GetBuffer(buffer, &ID3D12Resource::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12Resource).as_mut() {
-                        Some(id3d12resource) => { return Ok(CpID3D12Resource{value:id3d12resource, data: buffer, destdata: None }); }
+                        Some(id3d12resource) => { return Ok(CpID3D12Resource { value: id3d12resource, data: buffer, destdata: None }); }
                         None => { return Err(v); }
                     }
                 }
@@ -747,7 +758,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
     }
 }
 
-impl<'a> CpID3D12CommandAllocator<'a> {
+impl CpID3D12CommandAllocator {
     pub fn cp_reset(&self) -> Result<HRESULT, HRESULT> {
         unsafe {
             return self.0.Reset().hresult_to_result();
@@ -755,14 +766,14 @@ impl<'a> CpID3D12CommandAllocator<'a> {
     }
 }
 
-impl<'a> CpID3D12GraphicsCommandList<'a> {
+impl CpID3D12GraphicsCommandList {
     pub fn cp_reset(&self, cp_id3d12command_allocator: &mut CpID3D12CommandAllocator, p_initial_state_opt: &mut Option<ID3D12PipelineState>) -> Result<HRESULT, HRESULT> {
         let p_initial_state: *mut ID3D12PipelineState = match p_initial_state_opt {
             Some(v) => { v }
             None => { null_mut() }
         };
         unsafe {
-            return self.0.Reset(cp_id3d12command_allocator.0, p_initial_state).hresult_to_result();
+            return self.0.Reset(cp_id3d12command_allocator.0.as_mut(), p_initial_state).hresult_to_result();
         }
     }
     pub fn cp_resource_barrier(&self, _D3D12_RESOURCE_BARRIER: Vec<D3D12_RESOURCE_BARRIER>) {
@@ -790,7 +801,7 @@ impl<'a> CpID3D12CommandDispacher<'a> {
     }
 }
 
-impl<'a> CpID3D12CommandQueue<'a> {
+impl CpID3D12CommandQueue {
     pub fn cp_execute_command_lists(&self, cp_ID3D12CommandLists: &mut Vec<CpID3D12GraphicsCommandList>) {
         let NumCommandLists: u32 = cp_ID3D12CommandLists.len() as u32;
         let ppCommandLists = cp_ID3D12CommandLists.as_ptr() as *const *mut ID3D12CommandList;
@@ -806,9 +817,9 @@ impl<'a> CpID3D12CommandQueue<'a> {
 }
 
 impl<'a> CpID3DBlob<'a> {
-    pub fn cp_d3dcompile_from_file( pFileName: &str,pDefinesOpt: Option<&D3D_SHADER_MACRO>,pInclude: *mut ID3DInclude,pEntrypoint: &str,pTarget:  &str,Flags1: UINT,Flags2: UINT)-> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>,HRESULT)>{
-        let mut okBlob:*mut ID3D10Blob = null_mut();
-        let mut errBlob:*mut ID3D10Blob = null_mut();
+    pub fn cp_d3dcompile_from_file(pFileName: &str, pDefinesOpt: Option<&D3D_SHADER_MACRO>, pInclude: *mut ID3DInclude, pEntrypoint: &str, pTarget: &str, Flags1: UINT, Flags2: UINT) -> Result<CpID3DBlob<'a>, (CpID3DBlob<'a>, HRESULT)> {
+        let mut okBlob: *mut ID3D10Blob = null_mut();
+        let mut errBlob: *mut ID3D10Blob = null_mut();
         let pDefines: *const D3D_SHADER_MACRO = match pDefinesOpt {
             Some(v) => { v }
             None => { null_mut() }
@@ -816,14 +827,14 @@ impl<'a> CpID3DBlob<'a> {
         let CstrpEntrypoint = CString::new(pEntrypoint).expect("CString::new failed");
         let CstrpTarget = CString::new(pTarget).expect("CString::new failed");
 
-        unsafe{
-             match D3DCompileFromFile(to_wide_chars(pFileName).as_ptr(), pDefines, pInclude, CstrpEntrypoint.as_ptr(), CstrpTarget.as_ptr(), Flags1, Flags2, &mut okBlob, &mut errBlob ).hresult_to_result(){
-                 Ok(_) => {
-                     Ok(CpID3DBlob(okBlob.as_mut().unwrap()))
-                 }
-                 Err(v) => {
-                     Err((CpID3DBlob(errBlob.as_mut().unwrap()),v))
-                 }
+        unsafe {
+            match D3DCompileFromFile(to_wide_chars(pFileName).as_ptr(), pDefines, pInclude, CstrpEntrypoint.as_ptr(), CstrpTarget.as_ptr(), Flags1, Flags2, &mut okBlob, &mut errBlob).hresult_to_result() {
+                Ok(_) => {
+                    Ok(CpID3DBlob(okBlob.as_mut().unwrap()))
+                }
+                Err(v) => {
+                    Err((CpID3DBlob(errBlob.as_mut().unwrap()), v))
+                }
             }
         }
     }
@@ -832,12 +843,13 @@ impl<'a> CpID3DBlob<'a> {
             self.0.GetBufferPointer().as_mut().unwrap()
         }
     }
-    pub fn cp_get_buffer_size(&self)->usize{
+    pub fn cp_get_buffer_size(&self) -> usize {
         unsafe {
             self.0.GetBufferSize()
         }
     }
 }
+
 impl<'a> CpID3D12Fence<'a> {
     pub fn cp_get_completed_value(&self) -> u64 {
         unsafe {
@@ -857,7 +869,7 @@ impl<'a> CpID3D12Fence<'a> {
     }
 }
 
-impl<'a> CpID3D12DescriptorHeap<'a> {
+impl CpID3D12DescriptorHeap {
     pub fn cp_get_cpudescriptor_handle_for_heap_start(&self) -> CpD3D12_CPU_DESCRIPTOR_HANDLE {
         let descripter_heap = unsafe {
             self.value.GetCPUDescriptorHandleForHeapStart()
