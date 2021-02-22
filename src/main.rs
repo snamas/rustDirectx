@@ -75,7 +75,6 @@ fn print_message(msg: &str) -> Result<i32, Error> {
 }
 
 fn main() {
-    let mut _id3d12device = CpID3D12Device::new();
     {
         let mut _id3d12debug = null_mut();
         unsafe {
@@ -88,6 +87,8 @@ fn main() {
             }
         }
     }
+    ///CpID3D12Deviceの作成はID3D12Debugの後で行うこと。C++で確認済み。デバッグレイヤーが正常に動かないため
+    let mut _id3d12device = CpID3D12Device::new();
     {
         let mut _id3d12debugDev = null_mut();
         unsafe {
@@ -169,10 +170,10 @@ fn main() {
         right: WINDOW_WIDTH as i32,
         bottom: WINDOW_HEIGHT as i32
     };
-    let defstr = "Asset\\Box.glb".to_string();
+    let defstr = "Asset\\Shapell_Mtoon.vrm".to_string();
     let args: Vec<String> = env::args().collect();
     let query = args.get(1).unwrap_or(&defstr);
-    let shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, query.as_ref());
+    let mut shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, query.as_ref());
 
 
     loop {
@@ -186,36 +187,14 @@ fn main() {
         }
         let clearcolor: [f32; 4] = [0.0, 1.0, 1.0, 1.0];
         let current_buff_index = _dxgi_swap_chain4.cp_get_current_back_buffer_index();
+        let mut current_sw_heaps =  _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start().cp_descriptor_handle_increment_ptr(&_id3d12device,current_buff_index);
         let mut transition_barrier_desc = D3D12_RESOURCE_TRANSITION_BARRIER{
             pResource: _dxgi_swap_chain4.cp_get_buffer(current_buff_index).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) }).value,
             Subresource: 0,
             StateBefore: D3D12_RESOURCE_STATE_PRESENT,
             StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET
         };
-        let barrier_desc =CpD3D12_RESOURCE_BARRIER::new(CpD3d12ResourceTransitionBarrier{ d3d12_resource_transition_barrier: transition_barrier_desc, flags: 0 });
-        unsafe { _id3d12commanddispacher.command_lists[0].cp_resource_barrier(vec![barrier_desc]) };
-
-        let mut current_sw_heaps =  _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start().cp_descriptor_handle_increment_ptr(&_id3d12device,current_buff_index);
-        unsafe { _id3d12commanddispacher.command_lists[0].0.OMSetRenderTargets(1, &current_sw_heaps.value, i32::from(true), null_mut()) };
-        unsafe { _id3d12commanddispacher.command_lists[0].0.ClearRenderTargetView(current_sw_heaps.value, &clearcolor, 0, null_mut()) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetViewports(1, &viewport) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.RSSetScissorRects(1, &scissorRect) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.SetPipelineState( pipelineState.0) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.SetGraphicsRootSignature( rootsignature.0.as_mut()) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST) }
-        ///todo:shapelをここに直接入れてるので何とかする。
-        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetVertexBuffers( 0,1,shapel_object.d3d12_vertex_buffer_view.as_ref()) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.IASetIndexBuffer( shapel_object.d3d12_index_buffer_view.as_ref()) }
-        unsafe { _id3d12commanddispacher.command_lists[0].0.DrawIndexedInstanced( shapel_object.indexcount,1,0,0,0) }
-        transition_barrier_desc.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        transition_barrier_desc.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-
-        let barrier_desc =CpD3D12_RESOURCE_BARRIER::new(CpD3d12ResourceTransitionBarrier{ d3d12_resource_transition_barrier: transition_barrier_desc, flags: 0 });
-        unsafe { _id3d12commanddispacher.command_lists[0].cp_resource_barrier(vec![barrier_desc]) };
-
-        unsafe { _id3d12commanddispacher.command_lists[0].0.Close() };
-        _id3d12commanddispacher.cp_execute_command_lists();
-
+        shapel_object.Update(current_sw_heaps,transition_barrier_desc);
         _id3d12fence.cp_increment_counter(1);
         _id3d12_command_queue.cp_signal(&mut _id3d12fence);
         if (!_id3d12fence.cp_is_reach_fance_value()) {
@@ -224,8 +203,7 @@ fn main() {
             unsafe{WaitForSingleObject(event, INFINITE)};
             unsafe{CloseHandle(event)};
         }
-
-        _id3d12commanddispacher.cp_reset(&mut None);
+        shapel_object.Reset();
         unsafe { _dxgi_swap_chain4.value.Present(1, 0) };
     }
     println!("last OS error: {:?}", Error::last_os_error());
