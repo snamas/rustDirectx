@@ -26,8 +26,16 @@ use std::ffi::CString;
 use crate::Cp_directx12::cp_default_value::{CpD3D12_GRAPHICS_PIPELINE_STATE_DESC, CpD3D12_ROOT_SIGNATURE_DESC};
 use winapi::_core::ptr::null;
 use std::fmt::Debug;
+use std::mem::zeroed;
 
 pub struct CpID3D12Device(pub Box<ID3D12Device>);
+impl Drop for CpID3D12Device{
+    fn drop(&mut self) {
+        unsafe {
+            self.0.Release();
+        }
+    }
+}
 
 pub struct CpID3DBlob<'a>(pub &'a ID3DBlob);
 
@@ -68,10 +76,16 @@ pub struct CpID3D12GraphicsCommandList(pub Box<ID3D12GraphicsCommandList>);
 
 pub struct CpD3D12_RESOURCE_BARRIER<'a>(pub &'a mut D3D12_RESOURCE_BARRIER);
 
-pub struct CpID3D12RootSignature<'a>(pub &'a mut ID3D12RootSignature);
-
+///todo:Boxに変換するとdrop時にpanicを起こす。
+pub struct CpID3D12RootSignature(pub Box<ID3D12RootSignature>);
+impl Drop for CpID3D12RootSignature{
+    fn drop(&mut self) {
+        unsafe {
+            self.0.Release();
+        }
+    }
+}
 pub struct CpID3D12PipelineState<'a>(pub &'a mut ID3D12PipelineState);
-
 pub struct CpID3D12Fence<'a> {
     value: &'a mut ID3D12Fence,
     fenceval: u64,
@@ -147,7 +161,11 @@ impl CpID3D12Device {
     }
     fn cp_d3d12create_device_result() -> Result<CpID3D12Device, HRESULT> {
         unsafe {
-            let mut _unknownobj = null_mut();
+            static mut _unknownobj: *mut c_void = null_mut();
+            let stack = 1;
+            let addst = &stack;
+            let heap = Box::new(1);
+            let addhp = &heap;
             match D3D12CreateDevice(null_mut(), D3D_FEATURE_LEVEL_12_1, &ID3D12Device::uuidof(), &mut _unknownobj).hresult_to_result() {
                 Ok(v) => {
                     let mut _id3d12deviceOpt = (_unknownobj as *const ID3D12Device).as_ref();
@@ -376,7 +394,7 @@ impl CpID3D12Device {
                 Ok(v) => {
                     match (_unknownobj as *mut ID3D12RootSignature).as_mut() {
                         Some(_ID3D12RootSignature) => {
-                            return Ok(CpID3D12RootSignature(_ID3D12RootSignature)); }
+                            return Ok(CpID3D12RootSignature(Box::from_raw(_ID3D12RootSignature))); }
 
                         None => { return Err(v); }
                     }
@@ -505,7 +523,7 @@ impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC {
             VS: D3D12_SHADER_BYTECODE { pShaderBytecode: vsBlob.cp_get_buffer_pointer(), BytecodeLength: vsBlob.cp_get_buffer_size() },
             PS: D3D12_SHADER_BYTECODE { pShaderBytecode: psBlob.cp_get_buffer_pointer(), BytecodeLength: psBlob.cp_get_buffer_size() },
             InputLayout: D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: d3d12_input_element_descs.as_ptr(), NumElements: d3d12_input_element_descs.len() as u32 },
-            pRootSignature: cp_id3d12root_signature.0,
+            pRootSignature: cp_id3d12root_signature.0.as_mut(),
             ..CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::default().0
         };
         if let Some(ds_blob) = ds_blob_opt {
