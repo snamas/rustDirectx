@@ -27,11 +27,11 @@ use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32G32B
 use winapi::shared::dxgi::{DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, DXGI_SWAP_CHAIN_DESC};
 use winapi::shared::dxgitype::{DXGI_USAGE_BACK_BUFFER, DXGI_SAMPLE_DESC};
 use winapi::ctypes::c_void;
-use crate::Cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER, CpID3DBlob, CpID3D12RootSignature};
+use crate::Cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER, CpID3DBlob, CpID3D12RootSignature, CpEventW};
 use crate::Cp_directx12::CpHWND;
 use crate::gltfimporttest::gltfimport;
 use crate::Cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
-use winapi::um::synchapi::{CreateEventA, CreateEventExW, WaitForSingleObject};
+use winapi::um::synchapi::{CreateEventA, CreateEventExW, WaitForSingleObject, CreateEventW};
 use winapi::um::winbase::INFINITE;
 use winapi::um::handleapi::CloseHandle;
 use winapi::um::d3dcompiler::{D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION};
@@ -108,11 +108,8 @@ fn main() {
     println!("last OS error: {:?}", Error::last_os_error());
 
     let mut hwnd = CpHWND::new(None, None);
-    ///todo:ここラップする。
-    unsafe {
-        let mut hwndtmp = &mut hwnd.0;
-        ShowWindow(*hwndtmp, SW_SHOW);
-    };
+    hwnd.cp_show_window(SW_SHOW);
+
     let mut _dxgi_factory = CpIDXGIFactory6::new();
     let mut _id3d12_command_queue = _id3d12device.cp_create_command_queue(None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let _dxgi_swap_chain4 = _dxgi_factory.cp_create_swap_chain_for_hwnd(&mut _id3d12_command_queue, &mut hwnd, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
@@ -170,7 +167,7 @@ fn main() {
         right: WINDOW_WIDTH as i32,
         bottom: WINDOW_HEIGHT as i32
     };
-    let defstr = "Asset\\Shapell_Mtoon.vrm".to_string();
+    let defstr = "Asset\\Box.glb".to_string();
     let args: Vec<String> = env::args().collect();
     let query = args.get(1).unwrap_or(&defstr);
     let mut shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, query.as_ref());
@@ -194,17 +191,27 @@ fn main() {
             StateBefore: D3D12_RESOURCE_STATE_PRESENT,
             StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET
         };
+        let barrier_desc = CpD3D12_RESOURCE_BARRIER::new(CpD3d12ResourceTransitionBarrier { d3d12_resource_transition_barrier: transition_barrier_desc, flags: 0 });
+        _id3d12commanddispacher.cp_reset(&mut None);
+        _id3d12commanddispacher.command_lists[0].cp_resource_barrier(&vec![barrier_desc]);
+        _id3d12commanddispacher.command_lists[0].cp_clear_render_target_view(&current_sw_heaps.value, &clearcolor, None);
+        transition_barrier_desc.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        transition_barrier_desc.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+        let barrier_desc = CpD3D12_RESOURCE_BARRIER::new(CpD3d12ResourceTransitionBarrier { d3d12_resource_transition_barrier: transition_barrier_desc, flags: 0 });
+        _id3d12commanddispacher.command_lists[0].cp_resource_barrier(&vec![barrier_desc]);
+        _id3d12commanddispacher.command_lists[0].cp_close();
+        _id3d12commanddispacher.cp_execute_command_lists();
+
         shapel_object.Update(current_sw_heaps,transition_barrier_desc);
         _id3d12fence.cp_increment_counter(1);
         _id3d12_command_queue.cp_signal(&mut _id3d12fence);
         if (!_id3d12fence.cp_is_reach_fance_value()) {
-            let event = unsafe{CreateEventA(null_mut(), FALSE, FALSE, null_mut())};
-            _id3d12fence.cp_set_event_on_completion(event);
-            unsafe{WaitForSingleObject(event, INFINITE)};
-            unsafe{CloseHandle(event)};
+            let mut event = CpEventW::cp_create_event_w(None, false, false, None).unwrap_or_else(|| panic!("last OS error: {:?}", Error::last_os_error()));
+            _id3d12fence.cp_set_event_on_completion(&mut event);
+            event.cp_wait_for_single_object(INFINITE);
+            event.cp_CloseHandlet();
         }
-        shapel_object.Reset();
-        unsafe { _dxgi_swap_chain4.value.Present(1, 0) };
+        _dxgi_swap_chain4.cp_present(1,0);
     }
     println!("last OS error: {:?}", Error::last_os_error());
     if let Err(v) = print_message("Hello, world!") { println!("{}", v) }
