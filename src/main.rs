@@ -3,6 +3,7 @@ mod gltfimporttest;
 mod ShapelVRM;
 
 use std::io::Error;
+
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 800;
 
@@ -11,7 +12,7 @@ use winapi::um::winnt::{HRESULT, LPCWSTR};
 use winapi::shared::minwindef::{LPARAM, LRESULT, UINT, WPARAM, HINSTANCE, FALSE, TRUE};
 use winapi::shared::windef::{HICON, HWND, RECT, HWND__, POINT};
 use winapi::um::winuser::{MB_OK, MessageBoxW, WM_DESTROY, PostQuitMessage, WNDCLASSEXW, AdjustWindowRect, WS_OVERLAPPEDWINDOW, RegisterClassExW, CW_USEDEFAULT, CreateWindowExW, DefWindowProcW, WS_VISIBLE, UnregisterClassW, LoadCursorW, IDC_ARROW, CS_OWNDC, AdjustWindowRectEx, ShowWindow, SW_SHOW, PeekMessageW, MSG, TranslateMessage, DispatchMessageW, WM_QUIT, PM_REMOVE, WS_OVERLAPPED};
-use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_RESOURCE_BARRIER, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_FENCE_FLAG_NONE, D3D12_INPUT_ELEMENT_DESC, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_APPEND_ALIGNED_ELEMENT, D3D_ROOT_SIGNATURE_VERSION_1_0, D3D12_VIEWPORT, D3D12_RECT,ID3D12Object};
+use winapi::um::d3d12::{D3D12GetDebugInterface, ID3D12Device, D3D12CreateDevice, D3D12_COMMAND_LIST_TYPE_DIRECT, ID3D12CommandAllocator, ID3D12GraphicsCommandList, D3D12_COMMAND_QUEUE_DESC, D3D12_COMMAND_QUEUE_FLAG_NONE, D3D12_COMMAND_QUEUE_PRIORITY_NORMAL, ID3D12CommandQueue, D3D12_DESCRIPTOR_HEAP_DESC, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, ID3D12DescriptorHeap, ID3D12Resource, D3D12_CPU_DESCRIPTOR_HANDLE, ID3D12CommandList, D3D12_RESOURCE_BARRIER, D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_ALIASING_BARRIER, D3D12_FENCE_FLAG_NONE, D3D12_INPUT_ELEMENT_DESC, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_APPEND_ALIGNED_ELEMENT, D3D_ROOT_SIGNATURE_VERSION_1_0, D3D12_VIEWPORT, D3D12_RECT, ID3D12Object};
 use winapi::um::d3d12sdklayers::{ID3D12Debug, ID3D12DebugDevice, D3D12_RLDO_DETAIL, D3D12_RLDO_IGNORE_INTERNAL};
 use winapi::shared::dxgi1_6::{IDXGIFactory6};
 use winapi::shared::dxgi1_3::{CreateDXGIFactory2, DXGI_CREATE_FACTORY_DEBUG};
@@ -129,43 +130,46 @@ fn main() {
         let mut handle = _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start();
         _id3d12device.cp_create_render_target_view(&mut _swap_res, None, handle.cp_descriptor_handle_increment_ptr(&_id3d12device, index));
         drop(_swap_res);
-        println!("last OS error: {:?},ind:{:?}", Error::last_os_error(),index);
+        println!("last OS error: {:?},ind:{:?}", Error::last_os_error(), index);
     }
-    let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     println!("last OS error: {:?}", Error::last_os_error());
-    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     println!("last OS error: {:?}", Error::last_os_error());
-    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v|{ panic!("last OS error: {:?}", Error::last_os_error()) });
+    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let inputElementDesc = vec![
-        D3D12_INPUT_ELEMENT_DESC{
+        D3D12_INPUT_ELEMENT_DESC {
             SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
             SemanticIndex: 0,
             Format: DXGI_FORMAT_R32G32B32_FLOAT,
             InputSlot: 0,
             AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
             InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-            InstanceDataStepRate: 0
+            InstanceDataStepRate: 0,
         }
     ];
-    let cp_d3d12_root_signature_desc:CpD3D12_ROOT_SIGNATURE_DESC = Default::default();
+    let cp_d3d12_root_signature_desc: CpD3D12_ROOT_SIGNATURE_DESC = Default::default();
     let rootSigBlob = cp_d3d12_root_signature_desc.cp_d3d12serialize_root_signature(D3D_ROOT_SIGNATURE_VERSION_1_0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut rootsignature = _id3d12device.cp_create_root_signature(0, &rootSigBlob).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut cpgraphicsPipelineStateDesc = CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::create_d3d12_graphics_pipeline_state_desc(&vsBlob, &psBlob, inputElementDesc.into_boxed_slice(), &mut rootsignature, None, None, None);
-    let pipelineState = _id3d12device.cp_create_graphics_pipeline_state(&mut cpgraphicsPipelineStateDesc).unwrap_or_else(|v| { println!("last OS error: {:?}", Error::last_os_error());panic!("last OS error: {:?}", v) });
-    let viewport = D3D12_VIEWPORT{
+    let pipelineState = _id3d12device.cp_create_graphics_pipeline_state(&mut cpgraphicsPipelineStateDesc).unwrap_or_else(|v| {
+        println!("last OS error: {:?}", Error::last_os_error());
+        panic!("last OS error: {:?}", v)
+    });
+    let viewport = D3D12_VIEWPORT {
         TopLeftX: 0.0,
         TopLeftY: 0.0,
         Width: WINDOW_WIDTH as f32,
         Height: WINDOW_HEIGHT as f32,
         MinDepth: 0.0,
-        MaxDepth: 1.0
+        MaxDepth: 1.0,
     };
-    let scissorRect = D3D12_RECT{
+    let scissorRect = D3D12_RECT {
         left: 0,
         top: 0,
         right: WINDOW_WIDTH as i32,
-        bottom: WINDOW_HEIGHT as i32
+        bottom: WINDOW_HEIGHT as i32,
     };
     let defstr = "Asset\\Box.glb".to_string();
     let args: Vec<String> = env::args().collect();
@@ -174,22 +178,22 @@ fn main() {
 
 
     loop {
-        let mut cpmsg = CpMSG::cp_peek_message_w(null_mut(),0,0,PM_REMOVE);
-        if cpmsg.hasMessage{
+        let mut cpmsg = CpMSG::cp_peek_message_w(null_mut(), 0, 0, PM_REMOVE);
+        if cpmsg.hasMessage {
             cpmsg.cp_translate_message();
             cpmsg.cp_dispatch_message_w();
         }
-        if cpmsg.cp_has_wm_quit_message(){
+        if cpmsg.cp_has_wm_quit_message() {
             break;
         }
         let clearcolor: [f32; 4] = [0.0, 1.0, 1.0, 1.0];
         let current_buff_index = _dxgi_swap_chain4.cp_get_current_back_buffer_index();
-        let mut current_sw_heaps =  _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start().cp_descriptor_handle_increment_ptr(&_id3d12device,current_buff_index);
-        let mut transition_barrier_desc = D3D12_RESOURCE_TRANSITION_BARRIER{
+        let mut current_sw_heaps = _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start().cp_descriptor_handle_increment_ptr(&_id3d12device, current_buff_index);
+        let mut transition_barrier_desc = D3D12_RESOURCE_TRANSITION_BARRIER {
             pResource: _dxgi_swap_chain4.cp_get_buffer(current_buff_index).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) }).value,
             Subresource: 0,
             StateBefore: D3D12_RESOURCE_STATE_PRESENT,
-            StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET
+            StateAfter: D3D12_RESOURCE_STATE_RENDER_TARGET,
         };
         let barrier_desc = CpD3D12_RESOURCE_BARRIER::new(CpD3d12ResourceTransitionBarrier { d3d12_resource_transition_barrier: transition_barrier_desc, flags: 0 });
         _id3d12commanddispacher.cp_reset(&mut None);
@@ -202,7 +206,7 @@ fn main() {
         _id3d12commanddispacher.command_lists[0].cp_close();
         _id3d12commanddispacher.cp_execute_command_lists();
 
-        shapel_object.Update(current_sw_heaps,transition_barrier_desc);
+        shapel_object.Update(current_sw_heaps, transition_barrier_desc);
         _id3d12fence.cp_increment_counter(1);
         _id3d12_command_queue.cp_signal(&mut _id3d12fence);
         if (!_id3d12fence.cp_is_reach_fance_value()) {
@@ -211,7 +215,7 @@ fn main() {
             event.cp_wait_for_single_object(INFINITE);
             event.cp_CloseHandlet();
         }
-        _dxgi_swap_chain4.cp_present(1,0);
+        _dxgi_swap_chain4.cp_present(1, 0);
     }
     println!("last OS error: {:?}", Error::last_os_error());
     if let Err(v) = print_message("Hello, world!") { println!("{}", v) }

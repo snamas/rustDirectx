@@ -519,11 +519,11 @@ impl<'a> CpEventW<'a> {
         };
         Some(CpEventW(unsafe { CreateEventW(lpEventAttributes, i32::from(bManualReset), i32::from(bInitialState), lpName).as_mut()? }))
     }
-    pub fn cp_wait_for_single_object(&mut self,dwMilliseconds:DWORD) -> DWORD{
-        unsafe{WaitForSingleObject(self.0, dwMilliseconds)}
+    pub fn cp_wait_for_single_object(&mut self, dwMilliseconds: DWORD) -> DWORD {
+        unsafe { WaitForSingleObject(self.0, dwMilliseconds) }
     }
-    pub fn cp_CloseHandlet(&mut self) -> bool{
-        unsafe{CloseHandle(self.0).BOOLtobool()}
+    pub fn cp_CloseHandlet(&mut self) -> bool {
+        unsafe { CloseHandle(self.0).BOOLtobool() }
     }
 }
 
@@ -685,7 +685,7 @@ impl<'a> CpHWND<'a> {
         unsafe { UnregisterClassW(self.1.lpszClassName, self.1.hInstance); }
     }
 
-    pub fn cp_show_window(&mut self,nCmdShow: i32)->bool {
+    pub fn cp_show_window(&mut self, nCmdShow: i32) -> bool {
         unsafe { ShowWindow(self.0, nCmdShow).BOOLtobool() }
     }
 }
@@ -791,7 +791,7 @@ impl<'a> CpIDXGISwapChain4<'a> {
     }
     pub fn cp_present(&self, SyncInterval: u32, Flags: u32) -> Result<HRESULT, HRESULT> {
         unsafe {
-            self.value.Present(SyncInterval,Flags).hresult_to_result()
+            self.value.Present(SyncInterval, Flags).hresult_to_result()
         }
     }
 }
