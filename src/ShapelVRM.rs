@@ -16,7 +16,6 @@ use std::ptr::null_mut;
 use winapi::um::d3dcommon::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 pub struct ShapelObject<'a> {
-    //cp_id3d12device: &'a CpID3D12Device<'a>,
     pipelineState: CpID3D12PipelineState<'a>,
     rootsignature: CpID3D12RootSignature<'a>,
     cp_id3d12command_dispacher: Box<CpID3D12CommandDispacher<'a>>,
@@ -36,6 +35,7 @@ struct pointOnly(nalgebra::Point3<f32>);
 
 impl<'a> DrawObj<'a> for ShapelObject<'a> {
     fn new(cp_id3d12device: &'a CpID3D12Device, cp_id3d12command_queue: &'a CpID3D12CommandQueue, model_path: &Path) -> ShapelObject<'a> {
+        let mut _id3d12commanddispacher = Box::from(cp_id3d12device.cp_create_command_dispacher(0, cp_id3d12command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) }));
         let (document, buffers, images) = gltf::import(model_path).unwrap_or_else(|x| { panic!("{}", x) });
 
         let mut vertexes_pos = Vec::<[f32; 3]>::new();
@@ -78,16 +78,15 @@ impl<'a> DrawObj<'a> for ShapelObject<'a> {
                 InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
                 InstanceDataStepRate: 0,
             }
-        ];
+        ].into_boxed_slice();
         let cp_d3d12_root_signature_desc: CpD3D12_ROOT_SIGNATURE_DESC = Default::default();
         let rootSigBlob = cp_d3d12_root_signature_desc.cp_d3d12serialize_root_signature(D3D_ROOT_SIGNATURE_VERSION_1_0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
         let mut rootsignature = cp_id3d12device.cp_create_root_signature(0, &rootSigBlob).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-        let mut cpgraphicsPipelineStateDesc = CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::create_d3d12_graphics_pipeline_state_desc(&vsBlob, &psBlob, inputElementDesc.into_boxed_slice(), &mut rootsignature, None, None, None);
-        let pipelineState = cp_id3d12device.cp_create_graphics_pipeline_state(&mut cpgraphicsPipelineStateDesc).unwrap_or_else(|v| {
+        let mut cpgraphicsPipelineStateDesc = CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::create_d3d12_graphics_pipeline_state_desc(&vsBlob, &psBlob, &inputElementDesc, &mut rootsignature, None, None, None);
+        let pipelineState = cp_id3d12device.cp_create_graphics_pipeline_state(&cpgraphicsPipelineStateDesc).unwrap_or_else(|v| {
             println!("last OS error: {:?}", Error::last_os_error());
             panic!("last OS error: {:?}", v)
         });
-        let mut _id3d12commanddispacher = Box::from(cp_id3d12device.cp_create_command_dispacher(0, cp_id3d12command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) }));
         ShapelObject {
             pipelineState: pipelineState,
             rootsignature: rootsignature,

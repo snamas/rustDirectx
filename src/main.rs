@@ -129,48 +129,10 @@ fn main() {
         let mut _swap_res = _dxgi_swap_chain4.cp_get_buffer(index).unwrap_or_else(|v| { panic!("last OS error: {:?}", v) });
         let mut handle = _id3d12descripterheap_for_swapchain.cp_get_cpudescriptor_handle_for_heap_start();
         _id3d12device.cp_create_render_target_view(&mut _swap_res, None, handle.cp_descriptor_handle_increment_ptr(&_id3d12device, index));
-        drop(_swap_res);
-        println!("last OS error: {:?},ind:{:?}", Error::last_os_error(), index);
     }
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    println!("last OS error: {:?}", Error::last_os_error());
-    let vsBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "vert", "vs_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    println!("last OS error: {:?}", Error::last_os_error());
-    let psBlob = CpID3DBlob::cp_d3dcompile_from_file("Asset\\TestShader.hlsl", None, D3D_COMPILE_STANDARD_FILE_INCLUDE, "frag", "ps_5_0", D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION, 0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let inputElementDesc = vec![
-        D3D12_INPUT_ELEMENT_DESC {
-            SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
-            SemanticIndex: 0,
-            Format: DXGI_FORMAT_R32G32B32_FLOAT,
-            InputSlot: 0,
-            AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
-            InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-            InstanceDataStepRate: 0,
-        }
-    ];
-    let cp_d3d12_root_signature_desc: CpD3D12_ROOT_SIGNATURE_DESC = Default::default();
-    let rootSigBlob = cp_d3d12_root_signature_desc.cp_d3d12serialize_root_signature(D3D_ROOT_SIGNATURE_VERSION_1_0).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let mut rootsignature = _id3d12device.cp_create_root_signature(0, &rootSigBlob).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
-    let mut cpgraphicsPipelineStateDesc = CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::create_d3d12_graphics_pipeline_state_desc(&vsBlob, &psBlob, inputElementDesc.into_boxed_slice(), &mut rootsignature, None, None, None);
-    let pipelineState = _id3d12device.cp_create_graphics_pipeline_state(&mut cpgraphicsPipelineStateDesc).unwrap_or_else(|v| {
-        println!("last OS error: {:?}", Error::last_os_error());
-        panic!("last OS error: {:?}", v)
-    });
-    let viewport = D3D12_VIEWPORT {
-        TopLeftX: 0.0,
-        TopLeftY: 0.0,
-        Width: WINDOW_WIDTH as f32,
-        Height: WINDOW_HEIGHT as f32,
-        MinDepth: 0.0,
-        MaxDepth: 1.0,
-    };
-    let scissorRect = D3D12_RECT {
-        left: 0,
-        top: 0,
-        right: WINDOW_WIDTH as i32,
-        bottom: WINDOW_HEIGHT as i32,
-    };
+
     let defstr = "Asset\\Box.glb".to_string();
     let args: Vec<String> = env::args().collect();
     let query = args.get(1).unwrap_or(&defstr);

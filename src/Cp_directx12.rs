@@ -394,20 +394,7 @@ impl<'a> CpID3D12Device<'a> {
             }
         }
     }
-    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &mut D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT> {
-        ///todo:inputElementDescのアドレスがおかしくなる。現在ここに書いているけど将来的には分ける。
-        let inputElementDesc = [
-            D3D12_INPUT_ELEMENT_DESC {
-                SemanticName: CString::new("POSITION").expect("CString::new failed").into_raw(),
-                SemanticIndex: 0,
-                Format: DXGI_FORMAT_R32G32B32_FLOAT,
-                InputSlot: 0,
-                AlignedByteOffset: D3D12_APPEND_ALIGNED_ELEMENT,
-                InputSlotClass: D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-                InstanceDataStepRate: 0,
-            }
-        ];
-        d3d12_graphics_pipeline_state_desc.InputLayout = D3D12_INPUT_LAYOUT_DESC { pInputElementDescs: inputElementDesc.as_ptr(), NumElements: inputElementDesc.len() as u32 };
+    pub fn cp_create_graphics_pipeline_state(&self, d3d12_graphics_pipeline_state_desc: &D3D12_GRAPHICS_PIPELINE_STATE_DESC) -> Result<CpID3D12PipelineState, HRESULT> {
         unsafe {
             let mut _unknownobj = null_mut();
             match self.0.CreateGraphicsPipelineState(d3d12_graphics_pipeline_state_desc, &ID3D12PipelineState::uuidof(), &mut _unknownobj).hresult_to_result() {
@@ -529,7 +516,8 @@ impl<'a> CpEventW<'a> {
 
 impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC {
     /// D3D12_GRAPHICS_PIPELINE_STATE_DESCを作るための関数。初期化にいくらか追加しただけの関数なのでいろいろ後で設定しよう
-    pub fn create_d3d12_graphics_pipeline_state_desc(vsBlob: &CpID3DBlob, psBlob: &CpID3DBlob, d3d12_input_element_descs: Box<[D3D12_INPUT_ELEMENT_DESC]>, cp_id3d12root_signature: &mut CpID3D12RootSignature, ds_blob_opt: Option<&CpID3DBlob>, hs_blob_opt: Option<&CpID3DBlob>, gs_blob_opt: Option<&CpID3DBlob>) -> D3D12_GRAPHICS_PIPELINE_STATE_DESC {
+    /// &Box<[D3D12_INPUT_ELEMENT_DESC]>は参照で受け取るよ、関数を抜けたらBoxが解放されてヌルポになる
+    pub fn create_d3d12_graphics_pipeline_state_desc(vsBlob: &CpID3DBlob, psBlob: &CpID3DBlob, d3d12_input_element_descs: &Box<[D3D12_INPUT_ELEMENT_DESC]>, cp_id3d12root_signature: &mut CpID3D12RootSignature, ds_blob_opt: Option<&CpID3DBlob>, hs_blob_opt: Option<&CpID3DBlob>, gs_blob_opt: Option<&CpID3DBlob>) -> D3D12_GRAPHICS_PIPELINE_STATE_DESC {
         let mut d3d12_graphics_pipeline_state_desc = D3D12_GRAPHICS_PIPELINE_STATE_DESC {
             VS: D3D12_SHADER_BYTECODE { pShaderBytecode: vsBlob.cp_get_buffer_pointer(), BytecodeLength: vsBlob.cp_get_buffer_size() },
             PS: D3D12_SHADER_BYTECODE { pShaderBytecode: psBlob.cp_get_buffer_pointer(), BytecodeLength: psBlob.cp_get_buffer_size() },
@@ -537,6 +525,7 @@ impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC {
             pRootSignature: cp_id3d12root_signature.0,
             ..CpD3D12_GRAPHICS_PIPELINE_STATE_DESC::default().0
         };
+
         if let Some(ds_blob) = ds_blob_opt {
             d3d12_graphics_pipeline_state_desc.DS = D3D12_SHADER_BYTECODE { pShaderBytecode: ds_blob.cp_get_buffer_pointer(), BytecodeLength: ds_blob.cp_get_buffer_size() }
         }
@@ -546,6 +535,7 @@ impl CpD3D12_GRAPHICS_PIPELINE_STATE_DESC {
         if let Some(gs_blob) = gs_blob_opt {
             d3d12_graphics_pipeline_state_desc.GS = D3D12_SHADER_BYTECODE { pShaderBytecode: gs_blob.cp_get_buffer_pointer(), BytecodeLength: gs_blob.cp_get_buffer_size() }
         }
+
         d3d12_graphics_pipeline_state_desc
     }
 }
