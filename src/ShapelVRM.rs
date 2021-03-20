@@ -4,14 +4,14 @@ use nalgebra;
 use std::path::{PathBuf, Path};
 use gltf::accessor::Iter;
 use std::borrow::Borrow;
-use crate::Cp_directx12::{CpID3D12CommandQueue, CpID3D12Device, CpID3DBlob, CpD3D12_RESOURCE_BARRIER, CpID3D12CommandDispacher, CpD3D12_CPU_DESCRIPTOR_HANDLE, CpID3D12RootSignature, CpID3D12PipelineState};
+use crate::CapriCore::cp_directx12::{CpID3D12CommandQueue, CpID3D12Device, CpID3DBlob, CpD3D12_RESOURCE_BARRIER, CpID3D12CommandDispacher, CpD3D12_CPU_DESCRIPTOR_HANDLE, CpID3D12RootSignature, CpID3D12PipelineState};
 use winapi::um::d3dcompiler::{D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION};
 use winapi::um::d3d12::{D3D12_INPUT_ELEMENT_DESC, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D_ROOT_SIGNATURE_VERSION_1_0, D3D12_VIEWPORT, D3D12_RECT, D3D12_VERTEX_BUFFER_VIEW, D3D12_INDEX_BUFFER_VIEW, D3D12_RESOURCE_TRANSITION_BARRIER, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET};
 use std::ffi::CString;
 use winapi::shared::dxgiformat::DXGI_FORMAT_R32G32B32_FLOAT;
-use crate::Cp_directx12::cp_default_value::{CpD3D12_ROOT_SIGNATURE_DESC, CpD3D12_GRAPHICS_PIPELINE_STATE_DESC};
+use crate::CapriCore::cp_default_value::{CpD3D12_ROOT_SIGNATURE_DESC, CpD3D12_GRAPHICS_PIPELINE_STATE_DESC};
 use crate::{WINDOW_WIDTH, WINDOW_HEIGHT};
-use crate::Cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
+use crate::CapriCore::cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
 use std::ptr::null_mut;
 use winapi::um::d3dcommon::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 

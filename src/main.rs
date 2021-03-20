@@ -1,4 +1,4 @@
-mod Cp_directx12;
+mod CapriCore;
 mod gltfimporttest;
 mod ShapelVRM;
 
@@ -28,17 +28,16 @@ use winapi::shared::dxgiformat::{DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32G32B
 use winapi::shared::dxgi::{DXGI_SWAP_EFFECT_FLIP_DISCARD, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH, DXGI_SWAP_CHAIN_DESC};
 use winapi::shared::dxgitype::{DXGI_USAGE_BACK_BUFFER, DXGI_SAMPLE_DESC};
 use winapi::ctypes::c_void;
-use crate::Cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER, CpID3DBlob, CpID3D12RootSignature, CpEventW};
-use crate::Cp_directx12::CpHWND;
+use crate::CapriCore::cp_directx12::{to_wide_chars, CpID3D12Device, CpIDXGIFactory6, CpMSG, CpD3D12_RESOURCE_BARRIER, CpID3DBlob, CpID3D12RootSignature, CpEventW,CpHWND};
 use crate::gltfimporttest::gltfimport;
-use crate::Cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
+use crate::CapriCore::cp_directx12::CpD3d12ResourceBarrierDescType::CpD3d12ResourceTransitionBarrier;
 use winapi::um::synchapi::{CreateEventA, CreateEventExW, WaitForSingleObject, CreateEventW};
 use winapi::um::winbase::INFINITE;
 use winapi::um::handleapi::CloseHandle;
 use winapi::um::d3dcompiler::{D3D_COMPILE_STANDARD_FILE_INCLUDE, D3DCOMPILE_DEBUG, D3DCOMPILE_SKIP_OPTIMIZATION};
 use std::ffi::CString;
-use crate::Cp_directx12::cp_default_value::CpD3D12_GRAPHICS_PIPELINE_STATE_DESC;
-use crate::Cp_directx12::cp_default_value::CpD3D12_ROOT_SIGNATURE_DESC;
+use crate::CapriCore::cp_default_value::CpD3D12_GRAPHICS_PIPELINE_STATE_DESC;
+use crate::CapriCore::cp_default_value::CpD3D12_ROOT_SIGNATURE_DESC;
 use nalgebra::Point;
 use crate::ShapelVRM::{ShapelObject, DrawObj};
 use std::env;
@@ -133,7 +132,7 @@ fn main() {
     let mut _id3d12commanddispacher = _id3d12device.cp_create_command_dispacher(0, &_id3d12_command_queue, 1, None).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
     let mut _id3d12fence = _id3d12device.cp_create_fence(1, D3D12_FENCE_FLAG_NONE).unwrap_or_else(|v| { panic!("last OS error: {:?}", Error::last_os_error()) });
 
-    let defstr = "Asset\\Box.glb".to_string();
+    let defstr = "Asset\\shapell_Mtoon.vrm".to_string();
     let args: Vec<String> = env::args().collect();
     let query = args.get(1).unwrap_or(&defstr);
     let mut shapel_object = ShapelObject::new(&_id3d12device, &_id3d12_command_queue, query.as_ref());
