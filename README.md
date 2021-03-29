@@ -1,7 +1,7 @@
 # rustDirectx
 RustでDirectX12を扱えるようにしたライブラリと、それを用いた描画サンプルが含まれています。
 ## CapriCore
-CapriCoreライブラリは、DreictX12をRustで扱うためにRust仕様にラップしたライブラリです。
+CapriCoreライブラリは、DreictX12をRustで扱うためにRustに最適化されたライブラリです。
 ### cp_directx12.rs
 cp_directx12.rsは、DirecctX12の基本的な部分をRustで扱いやすくしたライブラリです。
 ## cp_default_value.rs
